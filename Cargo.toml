@@ -1,0 +1,191 @@
+[package]
+name = "n2db"
+version = "0.1.0"
+authors = ["jzc"]
+edition = "2018"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.26"
+jemallocator = "0.3"
+log = "0.4"
+log4rs = "0.11.0"
+libc = "0.2"
+memmap = "0.7"
+thiserror = "1.0"
+bitvec = "0.21"
+env_logger = "0.8"
+bytes = "0.6"
+lazy_static = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_bytes = "0.11"
+byteorder = "1.3.0"
+bincode = "1.3.1"
+rand = "0.7.3"
+once_cell = "1.5.2"
+numeric-enum-macro = "0.2"
+twox-hash = "1.6.0"
+dashmap = "5.5.0"
+crossbeam = "0.8.1"
+parking_lot = "0.10.2"
+bztree = "0.2.0"
+crossbeam-epoch = "0.9.4"
+
+[features]
+
+# If you have set up Dash and want to use Dash index, change "rust_dash" to "dash".
+default = ["rust_dash", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
+
+option = ["ycsb_f", "sysname"]
+
+basic = ["dash", "nvm_server", "local_allocator", "serializable"]
+basic_dram = ["rust_dash", "nvm_server", "local_allocator", "serializable"]
+
+# choose one of system
+sysname = ["Falcon"]
+Falcon = ["n2db_local", "ilog", "clwb_tuple", "hot_unflush"]
+Falcon_All_Flush = ["n2db_local", "ilog", "clwb_tuple"]
+Falcon_No_Flush = ["n2db_local", "ilog"]
+Inp = ["n2db_local", "clwb_delta", "clwb_tuple"]
+Outp = ["n2db_append", "clwb_tuple"]
+ZenS = ["zen_local", "clwb_tuple"]
+ZenS_No_Flush = ["zen_local"]
+Inp_No_Flush = ["n2db_local"]
+Inp_Hot_Tuple_Cache = ["n2db_local", "clwb_delta", "clwb_tuple", "hot_unflush"]
+
+# intermediate parameter
+n2db_local= ["update_local", "delta"]
+n2db_append= ["update_local", "append"]
+zen_local= ["buffer_pool", "zen", "update_local", "append"]
+
+# concurrency control config
+# cc_cfg_multiclock is Deprecated
+local_cc_cfg_to = ["cc_cfg_to", "read_ts"]
+local_cc_cfg_2pl = ["cc_cfg_2pl", "read_ts"]
+local_cc_cfg_occ = ["cc_cfg_occ"]
+direct_cc_cfg_occ = ["cc_cfg_occ", "update_direct"]
+cc_cfg_multiclock = []
+cc_cfg_to = []
+cc_cfg_occ = []
+cc_cfg_2pl = []
+read_ts = []
+
+# mvcc: enable multi-version concurrency control
+# ilog: enable small log window
+# hot_unflush: enable hot tuple trancing
+mvcc = []
+ilog = []
+hot_unflush = []
+
+# rust_hash: Rust hashtable
+# rust_dash: Rust dashmap
+# index_bplus_tree: Rust bplus_tree
+# lock_index: added for unconcurrency index: rust_hash, index_bplus_tree
+# nbtree(Requires other modifications for integration): NBTree refer to https://github.com/SJTU-DDST/NBTree
+# dash: Dash, refer to https://github.com/baotonglu/dash
+# There is and must be one of index
+rust_hash = []
+rust_dash = []
+index_bplus_tree = [] 
+lock_index = []
+nbtree = []
+dash = []
+
+# serializable: enable serializable snapshot isolation
+serializable = []
+
+# native: work on local
+# nvm_server: work on the NVM nvm_server
+
+native = []
+nvm_server = []
+
+# local_allocator(Must): thread-local allocator
+# center_allocator(Deprecated): shared allocator
+local_allocator = []
+center_allocator = []
+
+# update_local(Must): lazy update
+# update_direct(Deprecated): eager update
+update_local = []
+update_direct = []
+
+# ycsb_wh: 90% update & 10% read for YCSB
+# ycsb_: YCSB-* workloads
+# ycsb_mvcc: readonly ratio evaluation for MVCC in YCSB
+# ycsb_wh or ycsb_* 
+# There is and must be one of ycsb_wh/ycsb_*, not including ycsb_mvcc
+ycsb_wh = []
+ycsb_a = []
+ycsb_b = []
+ycsb_c = []
+ycsb_f = []
+ycsb_mvcc = []
+
+# buffer_pool: enable buffer_pool
+# zen: enable zen
+buffer_pool = []
+zen = []
+
+# delta: use delta storage schema
+# append: use append-only storage schema 
+# travel: use time-travel storage schema
+# refer to "An Empirical Evaluation of In-Memory Multi-Version Concurrency Control"
+# There is and must be one of delta/append/travel
+
+delta = []
+append = []
+travel = []
+
+# buffer_direct(Deprecated): eager mode for buffer pool based database
+buffer_direct = []
+
+# clock: enable latency statistics
+# txn_clock: sample transaction latency
+clock = []
+txn_clock = []
+
+# clwb_tuple: add clwb for tuple writing (insert & update)
+# clwb_delta: add clwb for delta version (log)
+# clwb_txn: add clwb for transaction state saving
+# clwb: incluing clwb_tuple, clwb_delta and clwb_txn
+clwb = ["clwb_tuple", "clwb_delta", "clwb_txn"]
+clwb_tuple = []
+clwb_delta = []
+clwb_txn = []
+
+# payment_clock: sample the latency of payment transaction in TPCC
+# new_order_clock: sample the latency of new_order transaction in TPCC
+# tpcc: manual parameter configuration for TPCC
+payment_clock = []
+new_order_clock = []
+tpcc = []
+
+
+
+# latency_read: sample read latency
+# latency_write: sample write latency
+# ycsb_read_tuple: read the whole tuple instead of read the needed column in YCSB
+latency_read = []
+latency_write = []
+ycsb_read_tuple = []
+
+# align: padding tuple header
+# a64/128/256/512: use 64/128/256/512 bytes date for YCSB tests.
+align = []
+a64 = []
+a128 = []
+a256 = []
+a512 = []
+
+# clwb_fence: use clwb+sfence instead of sfence+clwb on tuple updating
+clwb_fence = []
+
+
+[profile.release]
+debug = true
+
+[build-dependencies]
+cmake = "0.1.48"

@@ -1,0 +1,3 @@
+/Users/jzc/Desktop/database/rn2db/src/c/CMakeFiles/rebuild_cache.dir
+/Users/jzc/Desktop/database/rn2db/src/c/CMakeFiles/edit_cache.dir
+/Users/jzc/Desktop/database/rn2db/src/c/CMakeFiles/plus.dir
