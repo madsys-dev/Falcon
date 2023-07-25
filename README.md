@@ -49,6 +49,11 @@ We use excel to generate the experiment figures, you can copy the `result.csv` t
 
 note: Falcon(DRAM Index) does not perform well on YCSB-F(ZipFan) with small workloads due to concurrency conflicts, please use the full workloads if you have problems with this experiment. Other experiments perform similarly on the small workloads as the full workloads.
 
+## Recovery
+
+The process of recovery is described in `recovery.sh`. You need to run `ycsb.sh` to create the database. You can kill Falcon on testing phase, after all insert phase finished. Since the recovery experiment will be verified by random reads and writes, termination before the end of the insertion will result in an error reading or writing to a non-existent tuple.
+
+On recovery test, you can also kill Falcon on testing phase.
 ## Contact
 
 For any questions, please contact us at `jizc19@mails.tsinghua.edu.cn`.

@@ -151,7 +151,6 @@ impl Table {
             // delta.save(new_data);
             // file::sfence();
             // assert_eq!(delta.len(), 140);
-            buffer.save_redo(delta.len() + U64_OFFSET);
         }
         #[cfg(feature = "buffer_pool")]
         let tuple = self
@@ -233,7 +232,10 @@ impl Table {
                 .into());
             }
             #[cfg(feature = "ilog")]
-            delta.save(new_data);
+            {
+                delta.save(new_data);
+                buffer.save_redo(delta.len() + U64_OFFSET);
+            }
             Ok(ts)
         }
         // tuple.set_ts(ts);
