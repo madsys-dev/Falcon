@@ -1,0 +1,3 @@
+[submodule "dash"]
+	path = dash
+	url = https://github.com/madsys-dev/dash.git
