@@ -6,16 +6,11 @@ The project contains two parts, the Rust-based Falcon and the external C++-based
 
 After installing Rust, run `cargo build` to build Falcon. Make sure you can download the dependency packages from the web.
 
-### Compiling Dash
+### Dash
 
-
-
-Assuming to compile under a `build` directory:
+init Dash:
 ```bash
-cd dash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DUSE_PMEM=ON .. 
-make -j
+source build.sh
 ```
 
 For more information, please refer to https://github.com/baotonglu/dash. 

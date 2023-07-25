@@ -1,0 +1,2 @@
+#!/bin/sh
+exec python3 /usr/local/share/pmreorder/pmreorder.py 1.6+git703.g8cb972fe3 $*

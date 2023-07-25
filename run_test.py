@@ -174,6 +174,10 @@ def run_test(features, workload, result_path):
             result_csv += report(features, line, t_cnt)
     
     try:
+        os.mkdir("result")
+    except:
+        pass
+    try:
         os.mkdir("result/" + result_path)
     except:
         pass
