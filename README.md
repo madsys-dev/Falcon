@@ -10,6 +10,7 @@ After installing Rust, run `cargo build` to build Falcon. Make sure you can down
 
 init Dash:
 ```bash
+git submodule update --remote
 source build.sh
 ```
 
