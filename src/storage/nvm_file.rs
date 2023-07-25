@@ -1,3 +1,4 @@
+#[cfg(feature = "dash")]
 use crate::c::ffi::init;
 use crate::config::*;
 use crate::utils::file;

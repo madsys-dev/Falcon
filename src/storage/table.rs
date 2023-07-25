@@ -10,7 +10,9 @@ use crate::utils::io;
 use crate::utils::persist::persist_array::PersistArray;
 // use crate::util::persist::persist_bitmap::PersistBitmap;
 use super::global::Timer;
+#[cfg(feature = "dash")]
 use super::index::dash::Dash;
+#[cfg(feature = "dash")]
 use super::index::dashstring::DashString;
 // use super::index::nbtree::NBTree;
 use super::row::BufferDataVec;

@@ -64,6 +64,8 @@ note: Falcon(DRAM Index) does not perform well on YCSB-F(ZipFan) with small work
 
 ## Recovery
 
+Recovery evaluation is only for Falcon + Dash, please set feature `dash` and `Falcon` in `Cargo.toml`.
+
 The process of recovery is described in `recovery.sh`. You need to run `ycsb.sh` to create the database. You can kill Falcon on testing phase, after all insert phase finished. Since the recovery experiment will be verified by random reads and writes, termination before the end of the insertion will result in an error reading or writing to a non-existent tuple.
 
 On recovery test, you can also kill Falcon on testing phase.

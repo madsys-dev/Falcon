@@ -20,6 +20,7 @@ use jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
+#[cfg(feature = "dash")]
 pub mod c;
 pub mod config;
 pub mod mvcc_config;
