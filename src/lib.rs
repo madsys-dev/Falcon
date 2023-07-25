@@ -48,8 +48,6 @@ pub enum Error {
     IO(#[from] std::io::Error),
     #[error("tuple error")]
     Tuple(#[from] crate::storage::row::TupleError),
-    #[error("index error")]
-    Index(#[from] crate::index::bplus_tree::BPlusTreeError),
 }
 
 /// A specialized `Result` type for this crate.
