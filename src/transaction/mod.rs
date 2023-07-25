@@ -24,11 +24,8 @@ pub const THREAD_ID_BITS: u64 = 8;
 pub const THREAD_ID_MASK: u64 = (1u64 << THREAD_ID_BITS) - 1;
 
 pub fn get_thread_id(tid: u64) -> u64 {
-    #[cfg(not(feature = "cc_cfg_multiclock"))]
     return tid;
 
-    #[cfg(feature = "cc_cfg_multiclock")]
-    return tid & THREAD_ID_MASK;
 }
 pub fn get_timestamp(tid: u64) -> u64 {
     return tid >> THREAD_ID_BITS;
