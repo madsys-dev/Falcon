@@ -78,7 +78,7 @@ impl NVMTableStorage {
             #[cfg(feature = "native")]
             let file_name = "_test_persist";
             #[cfg(feature = "nvm_server")]
-            let file_name = "/mnt/pmem0/jzc/_test_persist";
+            let file_name = NVM_FILE_PATH;
 
             let _ = std::fs::remove_file(file_name);
             let storage = NVMTableStorage::new(file_name, 0).unwrap();
@@ -98,7 +98,7 @@ impl NVMTableStorage {
             #[cfg(feature = "native")]
             let file_name = "_test_persist";
             #[cfg(feature = "nvm_server")]
-            let file_name = "/mnt/pmem0/jzc/_test_persist";
+            let file_name = NVM_FILE_PATH;
             // let _ = std::fs::remove_file(file_name);
             let storage = NVMTableStorage::new(file_name, 0).unwrap();
             STORAGE.set(RwLock::new(storage)).unwrap();

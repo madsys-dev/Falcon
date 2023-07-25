@@ -26,6 +26,19 @@ The size of the test is configured in `src/config.rs`. you can reduce the size o
 pub const TPCC_WAREHOUSE:u64 = 48;
 pub const YCSB_TOTAL:u64 = 16*1024*1024;
 ```
+You need to set the path of NVM file, see in `src/config.rs` and `dash/src/dash.cpp`(**both `ycsb` and `tpcc` branchs**)
+``` c++
+src/config.rs:
+pub const NVM_FILE_PATH: &str = "your database file path";
+
+git checkout ycsb
+dash/src/dash.cpp:
+static const char *pool_name = "index(Dash) file path";
+
+git checkout tpcc
+dash/src/dash.cpp:
+static const char *pool_name = "index(Dash) file path";
+```
 
 ## Example program
 

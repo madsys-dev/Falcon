@@ -30,3 +30,4 @@ pub const POW_2_63: u64 = 1u64 << 63;
 // It's better if TPCC_WAREHOUSE is not less than THREAD_COUNT.
 pub const TPCC_WAREHOUSE: u64 = 2048;
 pub const YCSB_TOTAL: u64 = 256 * 1024 * 1024;
+pub const NVM_FILE_PATH: &str = "/mnt/pmem0/jzc/_test_persist";
