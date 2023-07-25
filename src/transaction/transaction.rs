@@ -235,9 +235,6 @@ impl<'a> Transaction<'a> {
                 return false;
             }
         }
-
-        #[cfg(feature = "cc_cfg_multiclock")]
-        self.txn_buffer.add_timestamp();
         #[cfg(feature = "zen")]
         let mut address = 0;
 
@@ -330,8 +327,6 @@ impl<'a> Transaction<'a> {
                 &mut self.timer,
             );
         }
-        #[cfg(feature = "cc_cfg_multiclock")]
-        self.txn_buffer.add_timestamp();
         self.finish(false);
     }
 

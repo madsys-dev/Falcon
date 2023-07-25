@@ -61,12 +61,10 @@ n2db_append= ["update_local", "append"]
 zen_local= ["buffer_pool", "zen", "update_local", "append"]
 
 # concurrency control config
-# cc_cfg_multiclock is Deprecated
 local_cc_cfg_to = ["cc_cfg_to", "read_ts"]
 local_cc_cfg_2pl = ["cc_cfg_2pl", "read_ts"]
 local_cc_cfg_occ = ["cc_cfg_occ"]
 direct_cc_cfg_occ = ["cc_cfg_occ", "update_direct"]
-cc_cfg_multiclock = []
 cc_cfg_to = []
 cc_cfg_occ = []
 cc_cfg_2pl = []
