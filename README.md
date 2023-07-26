@@ -13,7 +13,7 @@ After installing Rust, run `cargo build` to build Falcon. Make sure you can down
 
 init Dash:
 ```bash
-git submodule update --remote
+git submodule update --remote or git clone https://github.com/madsys-dev/dash.git
 source build.sh
 ```
 
@@ -29,23 +29,49 @@ mkfs-xfs -m reflink=0 -f /dev/pmem0
 mount -t xfs /dev/pmem0 /mnt/pmem0 -o dax
 ```
 
+### Database File and Index File path
 
-```
+
 You need to set the path of NVM file, see in `src/config.rs` and `dash/src/dash.cpp`(**both `ycsb` and `tpcc` branchs**)
-``` c++
+``` bash
 src/config.rs:
 pub const NVM_FILE_PATH: &str = "your database file path";
+
+#---------------------------------------------------------------
 
 git checkout ycsb
 dash/src/dash.cpp:
 static const char *pool_name = "index(Dash) file path";
+
+#---------------------------------------------------------------
 
 git checkout tpcc
 dash/src/dash.cpp:
 static const char *pool_name = "index(Dash) file path";
 ```
 
-We use taskset to run Falcon in one NUMA node. In our hardware, numa0 includes odd cores. You need to update taskset with your hardware.
+**Out test script will use the `ycsb` and `tpcc` branches, so remember to commit them.**
+
+### Pin Threads to Core
+
+We use taskset to run Falcon in a single NUMA node. In our hardware, numa0 includes even cores. You need to update taskset with your hardware. Use `numactl -H` to check your own hardware. **Make sure the CPU and NVM file are the same numa node.**
+
+Here are the changes, along with some examples:
+``` bash
+tpcc/ycsb/store.sh:
+
+taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96 ... # Database File and Index File saved in numa node 0 and numa node 0 includes even cores
+taskset -c 26-51,78-103 ...   # Database File and Index File saved in numa node 1 and numa node 1 includes cores 26~51 and 78~103
+
+#---------------------------------------------------------------
+
+run_test.py/run_dram_test.py:
+
+numa_set = "taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96"
+numa_set = "taskset -c 26-51,78-103"
+```
+
+
 ## Quick start
 
 The size of the test is configured in `src/config.rs`. you can reduce the size of the workloads for quick experimentation.
@@ -77,6 +103,8 @@ We use excel to generate the experiment figures, you can copy the `result.csv` t
 
 note: Falcon(DRAM Index) does not perform well on YCSB-F(ZipFan) with small workloads due to concurrency conflicts, please use the full workloads if you have problems with this experiment. Other experiments perform similarly on the small workloads as the full workloads.
 
+Without Dash, you can use `run_dram_test.py`, `collect_dram.py` and `result_dram.xlsx` instead.
+
 ## Recovery
 
 Recovery evaluation is only for Falcon + Dash, please set feature `dash` and `Falcon` in `Cargo.toml`.
@@ -84,6 +112,7 @@ Recovery evaluation is only for Falcon + Dash, please set feature `dash` and `Fa
 The process of recovery is described in `recovery.sh`. You need to run `ycsb.sh` to create the database. You can kill Falcon on testing phase, after all insert phase finished. Since the recovery experiment will be verified by random reads and writes, termination before the end of the insertion will result in an error reading or writing to a non-existent tuple.
 
 On recovery test, you can also kill Falcon on testing phase.
+
 ## Contact
 
 For any questions, please contact us at `jizc19@mails.tsinghua.edu.cn`.

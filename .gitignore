@@ -6,3 +6,4 @@ nohup.out
 error.txt
 latency.txt
 Cargo.lock
+data.csv

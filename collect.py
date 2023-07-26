@@ -7,18 +7,20 @@ total_csv = header + "\n"
 def collect(tasks):
     global total_csv
     results = []
-
-    for task in tasks:
-        total_csv += (task + "\n")
-        cur_path = "result/" + task + "/"
-        test_cases = os.listdir(cur_path)
-        for test_case in range(0, 200):
-            file_name = str(test_case) + ".csv"
-            if file_name in test_cases:
-                with open(cur_path + file_name, "r") as result_csv:
-                    for result in result_csv.readlines():
-                        total_csv += result
-                        results.append(result.strip().split(','))
+    try:
+        for task in tasks:
+            total_csv += (task + "\n")
+            cur_path = "result/" + task + "/"
+            test_cases = os.listdir(cur_path)
+            for test_case in range(0, 200):
+                file_name = str(test_case) + ".csv"
+                if file_name in test_cases:
+                    with open(cur_path + file_name, "r") as result_csv:
+                        for result in result_csv.readlines():
+                            total_csv += result
+                            results.append(result.strip().split(','))
+    except:
+        pass
     return results
 
 def rename(name):
@@ -39,7 +41,7 @@ def rename(name):
 
 collect_csv = ""
 
-results = collect(["tpcc_nvm", "tpcc_dram"])
+results = collect(["tpcc_dram"])
 # collect tpcc-48
 tpcc = {}
 for result in results:
@@ -54,8 +56,11 @@ collect_csv += "TPCC-48 \n"
 collect_csv += "sysname,2PL,TO,OCC,MV2PL,MVTO,MVOCC\n"
 for sysname in sysnames:
     collect_csv += sysname
-    for w in ['2PL', 'TO', 'OCC', 'MV2PL', 'MVTO', 'MVOCC']:
-        collect_csv += "," + str(tpcc[sysname][w]/2)
+    try:
+        for w in ['2PL', 'TO', 'OCC', 'MV2PL', 'MVTO', 'MVOCC']:
+            collect_csv += "," + str(tpcc[sysname][w]/2)
+    except:
+        pass
     collect_csv += "\n"
 collect_csv += "\n"
 
@@ -83,7 +88,7 @@ for sysname in sysnames:
     collect_csv += "\n"
 collect_csv += "\n"
 
-results = collect(["ycsb_nvm", "ycsb_dram"])
+results = collect(["ycsb_dram"])
 # collect ycsb-48
 ycsb = {}
 for result in results:
@@ -97,14 +102,17 @@ collect_csv += "YCSB-48 \n"
 collect_csv += "sysname,au,az,fu,fz\n"
 for sysname in sysnames:
     collect_csv += sysname
-    for w in ['aU', 'aZ', 'fU', 'fZ']:
-        collect_csv += "," + str(ycsb[sysname][w])
+    try:
+        for w in ['aU', 'aZ', 'fU', 'fZ']:
+            collect_csv += "," + str(ycsb[sysname][w])
+    except:
+        pass
     collect_csv += "\n"
 collect_csv += "\n"
 
-results = collect(["tpcc_scal"])
 # collect tpcc-scal
-sysnames = ["Inp", "Falcon(All Flush)", "Inp(No Flush)", "Inp(Hot Tuple Cache)", "Falcon"]
+sysnames = ["Inp", "Falcon(All Flush)", "Inp(No Flush)", "Inp(Hot Tuple Cache)", "Falcon(DRAM Index)"]
+results = collect(["tpcc_scal"])
 tpcc = {}
 for result in results:
     sysname = result[0]
@@ -117,8 +125,11 @@ collect_csv += "TPCC-scal \n"
 collect_csv += "threads," + ",".join(sysnames) + "\n"
 for thread in ["1", "2", "4", "8", "16", "32", "48"]:
     collect_csv += thread
-    for sysname in sysnames:
-        collect_csv += "," + str(tpcc[sysname][thread])
+    try:
+        for sysname in sysnames:
+            collect_csv += "," + str(tpcc[sysname][thread])
+    except: 
+        pass
     collect_csv += "\n"
 collect_csv += "\n"
 
@@ -139,8 +150,11 @@ for workload in ["0", "0.99"]:
     collect_csv += "threads," + ",".join(sysnames) + "\n"
     for thread in ["1", "2", "4", "8", "16", "32", "48"]:
         collect_csv += thread
-        for sysname in sysnames:
-            collect_csv += "," + str(ycsb[sysname][thread])
+        try:
+            for sysname in sysnames:
+                collect_csv += "," + str(ycsb[sysname][thread])
+        except:
+            pass
         collect_csv += "\n"
     collect_csv += "\n"
 

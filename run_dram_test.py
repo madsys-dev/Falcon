@@ -4,6 +4,8 @@ import os
 import copy
 import re
 
+numa_set = "taskset -c 26-51,78-103"
+
 k = 0
 index_type = "NVM"
 sysname = {
@@ -138,7 +140,7 @@ def run_test(features, workload, result_path):
     result_csv = ""
 
     # txt = "taskset -c 1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79,81,83,85,87,89,91,93,95,97,99 cargo test "  + workload
-    txt = "taskset -c 26-51,78-103 cargo test "  + workload
+    txt = numa_set + " cargo test "  + workload
     t_cnt = 16
     for f in features:
         if f == "":
