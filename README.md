@@ -11,12 +11,16 @@ After installing Rust, run `cargo build` to build Falcon. Make sure you can down
 
 ### Dash
 
-init Dash:
+Init Dash:
 ```bash
-git submodule update --remote or git clone https://github.com/madsys-dev/dash.git
+git submodule update --remote
 source build.sh
 ```
-
+or
+```bash
+git clone https://github.com/madsys-dev/dash.git
+source build.sh
+```
 For more information, please refer to https://github.com/baotonglu/dash. 
 
 If installing Dash is difficult, you can use Rust's indexes directly to use and initially test Falcon.
@@ -50,7 +54,7 @@ dash/src/dash.cpp:
 static const char *pool_name = "index(Dash) file path";
 ```
 
-**Out test script will use the `ycsb` and `tpcc` branches, so remember to commit them.**
+**All test scripts will use the `ycsb` and `tpcc` branches, so remember to commit them.**
 
 ### Pin Threads to Core
 

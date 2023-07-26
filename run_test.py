@@ -154,7 +154,7 @@ def run_test(features, workload, result_path):
     txt += " --no-default-features --release -- --nocapture"
     print("test cmd: " + txt)
     text = ""
-    r = os.popen("rm /mnt/pmem0/pmem_hash.data")
+    r = os.popen("rm /mnt/pmem1/pmem_hash.data")
     # r = os.popen(txt)
     text = TIMEOUT_COMMAND(txt, 600)
     if text == None:
