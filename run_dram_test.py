@@ -130,7 +130,7 @@ def run_test(features, workload, result_path):
     #     return ""
     # if k <= 18 and result_path == "tpcc_scal":
     #     return ""
-    # if k not in [112]:
+    # if k <= 7:
     #     return ""
     # if "mvcc" in features and "zen_local" in features:
     #     return ""
@@ -138,7 +138,7 @@ def run_test(features, workload, result_path):
     result_csv = ""
 
     # txt = "taskset -c 1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79,81,83,85,87,89,91,93,95,97,99 cargo test "  + workload
-    txt = "taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96 cargo test "  + workload
+    txt = "taskset -c 26-51,78-103 cargo test "  + workload
     t_cnt = 16
     for f in features:
         if f == "":
@@ -222,40 +222,6 @@ def set_index(index_type):
     r = os.popen("git checkout " + index_type)
     os.chdir(pwd) 
 
-def test_ycsb_nvm():
-    global k
-    global index_type
-    k = 0
-    index_type = "NVM"
-    set_index("ycsb")
-
-    props = {
-        "basic": [["basic"]],
-        "ycsb": [
-            ["ycsb_a"], ["ycsb_f"], 
-        ],
-        "cc_cfg": [
-            # ["local_cc_cfg_to"],
-            # ["local_cc_cfg_2pl"],
-            ["local_cc_cfg_occ"],
-        ],  
-        "mvcc": [
-            [""],
-            # ["mvcc"]
-        ],
-        "buffer": [
-            sysname["Falcon"], sysname["Falcon(No Flush)"],
-            sysname["Falcon(All Flush)"], sysname["Inp"],
-            sysname["Outp"],
-        ],
-        "clock": [
-            ["txn_clock"],
-        ],
-        "thread_count": [[48]]
-    }
-    test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_nvm")
-
-
 def test_ycsb_dram():
     global k
     global index_type
@@ -278,7 +244,9 @@ def test_ycsb_dram():
         ],
         "buffer": [
             sysname["Falcon"], sysname["ZenS"],
-            sysname["ZenS(No Flush)"],
+            sysname["ZenS(No Flush)"], sysname["Falcon(No Flush)"],
+            sysname["Falcon(All Flush)"], sysname["Inp"],
+            sysname["Outp"],
         ],
         "clock": [
             ["txn_clock"],
@@ -286,42 +254,6 @@ def test_ycsb_dram():
         "thread_count": [[48]]
     }
     test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_dram")
-
-def test_tpcc_nvm():
-    global k
-    global index_type
-
-    k = 0
-    index_type = "NVM"
-    set_index("tpcc")
-
-    props = {
-        "basic": [["basic", "tpcc"]],
-        "ycsb": [
-            ["ycsb_a"], # only for compile
-        ],
-        "cc_cfg": [
-            ["local_cc_cfg_to"],
-            ["local_cc_cfg_2pl"],
-            ["local_cc_cfg_occ"],
-        ],  
-        "mvcc": [
-            [""],
-            ["mvcc"]
-        ],
-        "buffer": [
-            sysname["Falcon"], sysname["Falcon(No Flush)"],
-            sysname["Falcon(All Flush)"], sysname["Inp"],
-            sysname["Outp"],
-        ],
-        "clock": [
-            ["txn_clock", "new_order_clock"],
-            ["txn_clock", "payment_clock"],
-        ],
-        "thread_count": [[48]]
-    }
-    test([], props, list(props.keys()), "tpcc_test_sync", "tpcc_nvm")
-
 
 def test_tpcc_dram():
     global k
@@ -346,7 +278,9 @@ def test_tpcc_dram():
         ],
         "buffer": [
             sysname["Falcon"], sysname["ZenS"],
-            sysname["ZenS(No Flush)"],
+            sysname["ZenS(No Flush)"], sysname["Falcon(No Flush)"],
+            sysname["Falcon(All Flush)"], sysname["Inp"],
+            sysname["Outp"],
         ],
         "clock": [
             ["txn_clock", "new_order_clock"],
@@ -361,11 +295,11 @@ def test_ycsb_scal():
     global k
     global index_type
     k = 0
-    index_type = "NVM"
-    set_index("ycsb")
+    index_type = "DRAM"
+    # set_index("ycsb")
 
     props = {
-        "basic": [["basic"]],
+        "basic": [["basic_dram"]],
         "ycsb": [
             ["ycsb_a"], 
         ],
@@ -388,16 +322,15 @@ def test_ycsb_scal():
     }
     test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_scal")
 
-
 def test_tpcc_scal():
     global k
     global index_type
     k = 0
-    index_type = "NVM"
+    index_type = "DRAM"
     set_index("tpcc")
 
     props = {
-        "basic": [["basic", "tpcc"]],
+        "basic": [["basic_dram", "tpcc"]],
         "ycsb": [
             ["ycsb_a"],  # default 
         ],
@@ -420,11 +353,9 @@ def test_tpcc_scal():
     }
     test([], props, list(props.keys()), "tpcc_test_sync", "tpcc_scal")
 
-test_ycsb_nvm()
-test_ycsb_dram()
+# test_ycsb_dram()
 
-test_tpcc_nvm()
 test_tpcc_dram()
 
-test_ycsb_scal()
-test_tpcc_scal()
+# test_ycsb_scal()
+# test_tpcc_scal()

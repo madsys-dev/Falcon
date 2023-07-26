@@ -1,1 +1,8 @@
 result/*
+.vscode/
+build/
+target/
+nohup.out
+error.txt
+latency.txt
+Cargo.lock

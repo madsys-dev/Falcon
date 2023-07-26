@@ -1,6 +1,9 @@
 # Falcon: Fast OLTP Engine for Persistent Cache and Non-Volatile Memory
 
+
 ## Building
+
+
 
 The project contains two parts, the Rust-based Falcon and the external C++-based NVM Hash index, Dash.
 
@@ -18,13 +21,15 @@ For more information, please refer to https://github.com/baotonglu/dash.
 
 If installing Dash is difficult, you can use Rust's indexes directly to use and initially test Falcon.
 
-## Quick start
+## Customer Setting
 
-The size of the test is configured in `src/config.rs`. you can reduce the size of the workloads for quick experimentation.
-```rust
-// TPCC_WAREHOUSE is not less than THREAD_COUNT.
-pub const TPCC_WAREHOUSE:u64 = 48;
-pub const YCSB_TOTAL:u64 = 16*1024*1024;
+We use NVM by DAX mode. If you don't have one, refer the instructions below.
+```bash
+mkfs-xfs -m reflink=0 -f /dev/pmem0
+mount -t xfs /dev/pmem0 /mnt/pmem0 -o dax
+```
+
+
 ```
 You need to set the path of NVM file, see in `src/config.rs` and `dash/src/dash.cpp`(**both `ycsb` and `tpcc` branchs**)
 ``` c++
@@ -40,6 +45,15 @@ dash/src/dash.cpp:
 static const char *pool_name = "index(Dash) file path";
 ```
 
+We use taskset to run Falcon in one NUMA node. In our hardware, numa0 includes odd cores. You need to update taskset with your hardware.
+## Quick start
+
+The size of the test is configured in `src/config.rs`. you can reduce the size of the workloads for quick experimentation.
+```rust
+// TPCC_WAREHOUSE is not less than THREAD_COUNT.
+pub const TPCC_WAREHOUSE:u64 = 48;
+pub const YCSB_TOTAL:u64 = 16*1024*1024;
+
 ## Example program
 
 Falcon uses conditional compilation to simulate different systems. We have stored several parameter configurations as examples.
@@ -51,6 +65,7 @@ sysname = ["Falcon"] or sysname = ["Inp"] or ...
 ```
 
 The process of testing is described in `ycsb.sh` and `tpcc.sh`. Once you have configured your test system, you can use `ycsb.sh` or `tpcc.sh` to get started quickly.
+
 
 ## Running benchmark
 
