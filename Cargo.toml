@@ -36,7 +36,7 @@ crossbeam-epoch = "0.9.4"
 [features]
 
 # If you have set up Dash and want to use Dash index, change "rust_dash" to "dash".
-default = ["rust_dash", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
+default = ["dash", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
 
 option = ["ycsb_f", "sysname"]
 
@@ -44,7 +44,7 @@ basic = ["dash", "nvm_server", "local_allocator", "serializable"]
 basic_dram = ["rust_dash", "nvm_server", "local_allocator", "serializable"]
 
 # choose one of system
-sysname = ["Outp"]
+sysname = ["Falcon"]
 Falcon = ["n2db_local", "ilog", "clwb_tuple", "hot_unflush"]
 Falcon_All_Flush = ["n2db_local", "ilog", "clwb_tuple"]
 Falcon_No_Flush = ["n2db_local", "ilog"]

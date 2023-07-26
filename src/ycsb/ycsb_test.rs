@@ -430,9 +430,9 @@ mod test {
     #[test]
     pub fn ycsb_test_reload() {
         let mut props = Properties::default();
-        // reload(true);
-        init_all(props);
-        init_data(props);
+        reload(true);
+        // init_all(props);
+        // init_data(props);
         let catalog = Catalog::global();
         let total_time = Duration::new(10, 0);
         let (tx0, rx) = mpsc::channel();

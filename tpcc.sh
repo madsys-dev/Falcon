@@ -1,4 +1,4 @@
-rm /mnt/pmem0/pmem_hash.data
+rm /mnt/pmem1/pmem_hash.data
 cd dash
 git checkout tpcc
 cd ..

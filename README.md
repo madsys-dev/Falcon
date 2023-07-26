@@ -79,7 +79,17 @@ The size of the test is configured in `src/config.rs`. you can reduce the size o
 // TPCC_WAREHOUSE is not less than THREAD_COUNT.
 pub const TPCC_WAREHOUSE:u64 = 48;
 pub const YCSB_TOTAL:u64 = 16*1024*1024;
+```
 
+If you do not have enough NVM space, you can also smaller the index. Here is an example: 
+```c++
+// for dash-tpcc 
+static const size_t pool_size = 1024ul * 1024ul * 1024ul * 16ul;
+size_t segment_number = 2048 * 32; // for tpcc
+
+
+
+```
 ## Example program
 
 Falcon uses conditional compilation to simulate different systems. We have stored several parameter configurations as examples.

@@ -13,7 +13,7 @@ fn main() {
         let dst = cmake::build("dash");
         println!("cargo:rustc-link-search=native={}", dst.display());
 
-        println!("cargo:rustc-link-search=./build/usr/local/lib");
+        println!("cargo:rustc-link-search=./dash_pmdk/lib");
 
         println!("cargo:rustc-link-search=/usr/lib/x86_64-linux-gnu/");
         println!("cargo:rustc-link-search=/usr/lib64");
@@ -25,18 +25,18 @@ fn main() {
         // println!("cargo:rustc-link-search=./dash");
         println!("cargo:rustc-link-search=./dash/build");
 
-        println!("cargo:rustc-link-lib=dylib=boost_system");
-        println!("cargo:rustc-link-lib=dylib=boost_thread");
-        println!("cargo:rustc-link-lib=dylib=pthread");
+        // println!("cargo:rustc-link-lib=dylib=boost_system");
+        // println!("cargo:rustc-link-lib=dylib=boost_thread");
+        // println!("cargo:rustc-link-lib=dylib=pthread");
         println!("cargo:rustc-link-lib=dylib=pmemobj");
         println!("cargo:rustc-link-lib=dylib=pmem");
         println!("cargo:rustc-link-lib=dylib=stdc++");
 
-        println!("cargo:rustc-link-lib=dylib=jemalloc");
-        println!("cargo:rustc-link-lib=dylib=gcc");
-        println!("cargo:rustc-link-lib=dylib=tbb");
-        println!("cargo:rustc-link-lib=dylib=tbbmalloc_proxy");
-        println!("cargo:rustc-link-lib=dylib=tbbmalloc");
+        // println!("cargo:rustc-link-lib=dylib=jemalloc");
+        // println!("cargo:rustc-link-lib=dylib=gcc");
+        // println!("cargo:rustc-link-lib=dylib=tbb");
+        // println!("cargo:rustc-link-lib=dylib=tbbmalloc_proxy");
+        // println!("cargo:rustc-link-lib=dylib=tbbmalloc");
     }
     // println!("cargo:rustc-link-lib=dylib=dash");
 
