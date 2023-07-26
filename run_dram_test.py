@@ -353,9 +353,9 @@ def test_tpcc_scal():
     }
     test([], props, list(props.keys()), "tpcc_test_sync", "tpcc_scal")
 
-# test_ycsb_dram()
+test_ycsb_dram()
 
 test_tpcc_dram()
 
-# test_ycsb_scal()
-# test_tpcc_scal()
+test_ycsb_scal()
+test_tpcc_scal()

@@ -44,7 +44,7 @@ basic = ["dash", "nvm_server", "local_allocator", "serializable"]
 basic_dram = ["rust_dash", "nvm_server", "local_allocator", "serializable"]
 
 # choose one of system
-sysname = ["Falcon"]
+sysname = ["Outp"]
 Falcon = ["n2db_local", "ilog", "clwb_tuple", "hot_unflush"]
 Falcon_All_Flush = ["n2db_local", "ilog", "clwb_tuple"]
 Falcon_No_Flush = ["n2db_local", "ilog"]

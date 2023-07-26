@@ -553,7 +553,7 @@ impl Table {
             new_tuple.update_data_by_column(TUPLE_HEADER as u64, old_data);
             new_tuple.update_data_by_column(start as u64, new_data);
 
-            new_tuple.set_ts(ts);
+            new_tuple.set_ts(tuple.ts());
             new_tuple.set_next(tuple._address());
             // new_tuple.set_lock_tid(0);
 
@@ -561,7 +561,7 @@ impl Table {
             file::sfence();
             #[cfg(feature = "clock")]
             timer.start(BUFFER);
-            self.update_tuple_id_on_index(tuple_address, &new_tuple)
+            self.update_tuple_id_on_index(tuple_address, &tuple)
                 .unwrap();
 
             #[cfg(feature = "clock")]
