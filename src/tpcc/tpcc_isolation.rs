@@ -27,7 +27,7 @@ mod tests {
         let districts = &Catalog::global().get_table("DISTRICT");
         // let districts_index = TpccIndex::districts_index();
 
-        // test1 
+        // test1
 
         let mut buffer0 = TransactionBuffer::new(Catalog::global(), 1);
         let mut buffer1 = TransactionBuffer::new(Catalog::global(), 2);
@@ -197,7 +197,7 @@ mod tests {
         );
         assert_eq!(next_oid0 + 1, next_oid1);
         assert_eq!(next_oid0 + 2, next_oid2);
-        // test4 
+        // test4
         // t0: read next_oid0
         // t1: update
         // t2: update -> false

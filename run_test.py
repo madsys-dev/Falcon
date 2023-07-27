@@ -3,8 +3,8 @@
 import os
 import copy
 import re
+from configure import numa_set
 
-numa_set = "taskset -c 26-51,78-103"
 
 k = 0
 index_type = "NVM"
@@ -422,11 +422,13 @@ def test_tpcc_scal():
     }
     test([], props, list(props.keys()), "tpcc_test_sync", "tpcc_scal")
 
-test_ycsb_nvm()
-test_ycsb_dram()
+if __name__ == "__main__":
 
-test_tpcc_nvm()
-test_tpcc_dram()
+    test_ycsb_nvm()
+    test_ycsb_dram()
 
-test_ycsb_scal()
-test_tpcc_scal()
+    test_tpcc_nvm()
+    test_tpcc_dram()
+
+    test_ycsb_scal()
+    test_tpcc_scal()

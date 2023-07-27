@@ -33,7 +33,6 @@ pub mod buffer;
 pub mod crud;
 pub mod index;
 
-
 #[cfg(feature = "index_bplus_tree")]
 type Index<T> = BplusTree<T, TupleId>;
 #[cfg(feature = "rust_hash")]
@@ -322,7 +321,7 @@ impl Table {
 
     fn reload_page(&self, page_id: u64, page_address: Address) -> Page {
         let mut free_count = self.max_tuple;
-        
+
         for offset in 0..self.tuple_start {
             let a: u8 = unsafe { io::read(page_address + offset) };
             if a == 0xFF {

@@ -1,6 +1,7 @@
 #[cfg(feature = "dash")]
 use crate::c::ffi::init;
 use crate::config::*;
+use crate::customer_config::{NVM_FILE_PATH, INDEX_FILE_PATH};
 use crate::utils::file;
 use crate::utils::persist::persist_bitmap::PersistBitmap;
 use crate::{Error, Result};
@@ -72,7 +73,8 @@ impl NVMTableStorage {
         // debug!("DEBUG");
         #[cfg(feature = "dash")]
         unsafe {
-            init();
+            let path = std::ffi::CString::new(INDEX_FILE_PATH).expect("CString::new failed");
+            init(path.as_ptr());
         }
 
         if STORAGE.get().is_none() {
@@ -92,7 +94,8 @@ impl NVMTableStorage {
         // debug!("DEBUG");
         #[cfg(feature = "dash")]
         unsafe {
-            init();
+            let path = std::ffi::CString::new(INDEX_FILE_PATH).expect("CString::new failed");
+            init(path.as_ptr());
         }
 
         if STORAGE.get().is_none() {

@@ -135,7 +135,7 @@ pub fn append_string(s: &mut String, t: String) {
     s.push_str(&t);
 }
 #[cfg(feature = "nvm_server")]
-pub const WAREHOUSES: u64 = crate::config::TPCC_WAREHOUSE;
+pub const WAREHOUSES: u64 = crate::customer_config::TPCC_WAREHOUSE;
 #[cfg(feature = "native")]
 pub const WAREHOUSES: u64 = 8 as u64;
 #[cfg(feature = "nvm_server")]

@@ -66,7 +66,7 @@ impl Properties {
         let mut prop = Properties {
             init_parallelism: 1,
             #[cfg(feature = "nvm_server")]
-            table_size: crate::config::YCSB_TOTAL,
+            table_size: crate::customer_config::YCSB_TOTAL,
             #[cfg(feature = "native")]
             table_size: 100000,
             zipf_theta: 0.6,

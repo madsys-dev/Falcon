@@ -23,6 +23,7 @@ static GLOBAL: Jemalloc = Jemalloc;
 #[cfg(feature = "dash")]
 pub mod c;
 pub mod config;
+pub mod customer_config;
 pub mod mvcc_config;
 pub mod storage;
 pub mod tpcc;

@@ -33,28 +33,16 @@ mkfs-xfs -m reflink=0 -f /dev/pmem0
 mount -t xfs /dev/pmem0 /mnt/pmem0 -o dax
 ```
 
+You can do the following customer setting quickly by updating `configure.py` and running it.
+
 ### Database File and Index File path
 
-
-You need to set the path of NVM file, see in `src/config.rs` and `dash/src/dash.cpp`(**both `ycsb` and `tpcc` branchs**)
+You need to set the path of NVM file, see in `src/custor_config.rs`:
 ``` bash
-src/config.rs:
 pub const NVM_FILE_PATH: &str = "your database file path";
-
+pub const INDEX_FILE_PATH: &str = "persist index file path";
 #---------------------------------------------------------------
-
-git checkout ycsb
-dash/src/dash.cpp:
-static const char *pool_name = "index(Dash) file path";
-
-#---------------------------------------------------------------
-
-git checkout tpcc
-dash/src/dash.cpp:
-static const char *pool_name = "index(Dash) file path";
 ```
-
-**All test scripts will use the `ycsb` and `tpcc` branches, so remember to commit them.**
 
 ### Pin Threads to Core
 
@@ -69,12 +57,11 @@ taskset -c 26-51,78-103 ...   # Database File and Index File saved in numa node 
 
 #---------------------------------------------------------------
 
-run_test.py/run_dram_test.py:
+configure.py:
 
 numa_set = "taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96"
 numa_set = "taskset -c 26-51,78-103"
 ```
-
 
 ## Quick start
 

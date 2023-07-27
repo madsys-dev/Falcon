@@ -8,7 +8,7 @@ mod test {
     use std::time::{Duration, SystemTime};
 
     use crate::config::{CATALOG_ADDRESS, POOL_PERC};
-    use crate::mvcc_config::{THREAD_COUNT, TRANSACTION_COUNT, TEST_THREAD_COUNT};
+    use crate::mvcc_config::{TEST_THREAD_COUNT, THREAD_COUNT, TRANSACTION_COUNT};
     use crate::storage::catalog::{self, Catalog};
     // use crate::storage::index::nbtree::NBTree;
     use crate::storage::nvm_file::NVMTableStorage;

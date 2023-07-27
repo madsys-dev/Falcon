@@ -26,8 +26,3 @@ pub const POOL_SIZE: usize = 1 * 1024 * 1024;
 pub const POOL_PERC: usize = 4;
 pub const ADDRESS_MASK: u64 = (1u64 << 48) - 1;
 pub const POW_2_63: u64 = 1u64 << 63;
-
-// It's better if TPCC_WAREHOUSE is not less than THREAD_COUNT.
-pub const TPCC_WAREHOUSE: u64 = 48;
-pub const YCSB_TOTAL: u64 = 64 * 1024 * 1024;
-pub const NVM_FILE_PATH: &str = "/mnt/pmem1/_test_persist";

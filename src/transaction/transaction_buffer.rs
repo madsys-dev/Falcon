@@ -13,7 +13,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::transaction::Transaction;
 
-
 #[cfg(feature = "ilog")]
 const MANAGER_PAGE_SIZE: u64 = 2048 - 4 * U64_OFFSET;
 #[cfg(feature = "ilog")]

@@ -13,7 +13,7 @@ pub fn mmap_lib(file_path: impl AsRef<Path>, file_size: u64) -> io::Result<MmapM
         .create(true)
         .open(file_path)?;
 
-    debug!("create or open file"); 
+    debug!("create or open file");
 
     f.set_len(file_size)?;
     let map = unsafe { MmapMut::map_mut(&f) }?;
@@ -28,13 +28,13 @@ pub fn mmap(file_path: impl AsRef<Path>, file_size: u64) -> io::Result<*mut u8> 
         .create(true)
         .open(file_path)?;
 
-    debug!("create or open file"); 
+    debug!("create or open file");
 
     f.set_len(file_size)?;
     unsafe {
         let data = libc::mmap(
             /* addr: */ NVM_ADDR as *mut libc::c_void,
-            /* len: */ file_size as usize, 
+            /* len: */ file_size as usize,
             /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
             // Then make the mapping *public* so it is written back to the file
             /* flags: */

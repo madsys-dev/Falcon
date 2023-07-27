@@ -16,7 +16,7 @@ use libc::c_void;
 #[link(name = "dash")]
 extern "C" {
     pub fn plus(a: c_int, b: c_int) -> c_int;
-    pub fn init();
+    pub fn init(file: *const c_char);
     pub fn dash_create() -> *mut c_void;
     pub fn dash_insert(dash: *mut c_void, key: u64, value: u64) -> c_int;
     pub fn dash_update(dash: *mut c_void, key: u64, value: u64) -> c_int;
