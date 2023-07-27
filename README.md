@@ -106,7 +106,9 @@ If you can’t install Dash, use `run_rust_only_test.py`, `collect_rust_only.py`
 
 Recovery evaluation is only for Falcon + Dash, please set feature `dash` and `Falcon` in `Cargo.toml`.
 
-The recovery process is explained in `recovery.sh`. To create the database, run `ycsb.sh`. During the testing phase, you can kill Falcon after the completion of the insert phase. Please note that terminating Falcon before the insert phase ends may cause errors when attempting to read or write to a non-existent tuple. When running the recovery test, you can also kill Falcon during the testing phase.
+Firstly, to create the database, execute `ycsb.sh`. (You can kill the process)
+
+The recovery process is described in `recovery.sh`. You can terminate Falcon during its execution and run `recovery.sh` for testing.
 
 ## Contact
 
