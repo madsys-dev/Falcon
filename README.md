@@ -65,7 +65,7 @@ numa_set = "taskset -c 26-51,78-103"
 
 ## Quick start
 
-The size of the test is configured in `src/config.rs`. you can reduce the size of the workloads for quick experimentation.
+The size of the test is configured in `src/customer_config.rs`. you can reduce the size of the workloads for quick experimentation.
 ```rust
 // TPCC_WAREHOUSE is not less than THREAD_COUNT.
 pub const TPCC_WAREHOUSE:u64 = 48;
@@ -77,9 +77,6 @@ If you do not have enough NVM space, you can also smaller the index. Here is an 
 // for dash-tpcc 
 static const size_t pool_size = 1024ul * 1024ul * 1024ul * 16ul;
 size_t segment_number = 2048 * 32; // for tpcc
-
-
-
 ```
 ## Example program
 
