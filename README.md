@@ -90,7 +90,7 @@ The process of testing is described in `ycsb.sh` and `tpcc.sh`. After configured
 
 ## Running benchmark
 
-`run_test.py` has already configured all the tests. To run the test, simply use the command python3 run_test.py. If needed, you can modify run_test.py for customized settings, such as reducing the number of threads:
+`run_test.py` has already configured all the tests. To run the test, simply use the command `python3 run_test.py`. If needed, you can modify `run_test.py` for customized settings, such as reducing the number of threads:
 ```python
 "thread_count": [[48]] -> "thread_count": [[32]]
 ```
@@ -116,7 +116,7 @@ Without Dash, use `run_dram_test.py`, `collect_dram.py` and `result_dram.xlsx` i
 
 Recovery evaluation is only for Falcon + Dash, please set feature `dash` and `Falcon` in `Cargo.toml`.
 
-The recovery process is explained in recovery.sh. To create the database, run ycsb.sh. During the testing phase, you can kill Falcon after the completion of the insert phase. Please note that terminating Falcon before the insert phase ends may cause errors when attempting to read or write to a non-existent tuple. When running the recovery test, you can also kill Falcon during the testing phase.
+The recovery process is explained in `recovery.sh`. To create the database, run `ycsb.sh`. During the testing phase, you can kill Falcon after the completion of the insert phase. Please note that terminating Falcon before the insert phase ends may cause errors when attempting to read or write to a non-existent tuple. When running the recovery test, you can also kill Falcon during the testing phase.
 
 ## Contact
 
