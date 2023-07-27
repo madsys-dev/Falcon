@@ -41,7 +41,7 @@ def rename(name):
 
 collect_csv = ""
 
-results = collect(["tpcc_dram"])
+results = collect(["tpcc_nvm", "tpcc_dram"])
 # collect tpcc-48
 tpcc = {}
 for result in results:
@@ -88,7 +88,7 @@ for sysname in sysnames:
     collect_csv += "\n"
 collect_csv += "\n"
 
-results = collect(["ycsb_dram"])
+results = collect(["ycsb_nvm", "ycsb_dram"])
 # collect ycsb-48
 ycsb = {}
 for result in results:
@@ -111,7 +111,7 @@ for sysname in sysnames:
 collect_csv += "\n"
 
 # collect tpcc-scal
-sysnames = ["Inp", "Falcon(All Flush)", "Inp(No Flush)", "Inp(Hot Tuple Cache)", "Falcon(DRAM Index)"]
+sysnames = ["Inp", "Falcon(All Flush)", "Inp(No Flush)", "Inp(Hot Tuple Cache)", "Falcon"]
 results = collect(["tpcc_scal"])
 tpcc = {}
 for result in results:
