@@ -5,7 +5,6 @@ import copy
 import re
 from configure import numa_set, pm_index
 
-
 k = 0
 index_type = "NVM"
 sysname = {
@@ -424,11 +423,11 @@ def test_tpcc_scal():
 
 if __name__ == "__main__":
 
-    # test_ycsb_nvm() # 10 test cases
-    # test_ycsb_dram() # 6 test cases
+    test_ycsb_nvm() # 10 test cases
+    test_ycsb_dram() # 6 test cases
 
     test_tpcc_nvm() # 60 test cases
-    # test_tpcc_dram() # 36 test cases
+    test_tpcc_dram() # 36 test cases
 
     test_ycsb_scal() # 35 test cases
     test_tpcc_scal() # 35 test cases

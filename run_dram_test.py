@@ -139,6 +139,8 @@ def test_tpcc_scal_dram_only():
     test([], props, list(props.keys()), "tpcc_test_sync", "tpcc_scal")
 
 if __name__ == "__main__":
+    global k
+    k = 0
     test_ycsb_dram_only()
 
     test_tpcc_dram_only()

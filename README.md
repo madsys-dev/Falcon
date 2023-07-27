@@ -71,16 +71,12 @@ size_t segment_number = 2048 * 32; // for tpcc
 ```
 ## Example program
 
-Falcon uses conditional compilation to simulate different systems. We have stored several parameter configurations as examples.
-
-We recommend that you set them up by modifying `Cargo.toml`. In `Cargo.toml`, fill in the `sysname` variable with the relevant parameters:
-
+Falcon uses conditional compilation to simulate different systems. In `Cargo.toml`, fill in the `sysname` variable with the relevant parameters:
 ```python
 sysname = ["Falcon"] or sysname = ["Inp"] or ...
 ```
 
-The process of testing is described in `ycsb.sh` and `tpcc.sh`. After configured, use `ycsb.sh` or `tpcc.sh` to get started quickly.
-
+After setting, `ycsb.sh` and `tpcc.sh` can be used to run the corresponding test.
 
 ## Running benchmark
 
