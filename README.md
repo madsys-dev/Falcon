@@ -54,18 +54,18 @@ numa_set = "taskset -c 26-51,78-103" # Database File and Index File saved in num
 
 ### Step3: Run `configure.py`
 
-## Quick start
+### Workload Size Setting
 
-The size of the test is configured in `src/customer_config.rs`. Smaller workloads can be used for quick experimentation:
+The size of the test is configured in `src/customer_config.rs`. A smaller workload can be used if there is no enough NVM space (see examples below): 
 ```rust
-// TPCC_WAREHOUSE is not less than THREAD_COUNT.
+// TPCC_WAREHOUSE is no less than THREAD_COUNT.
 pub const TPCC_WAREHOUSE:u64 = 48;
 pub const YCSB_TOTAL:u64 = 16*1024*1024;
 ```
 
-A smaller index can be used if there is no enough NVM space. Here is an example: 
+A smaller index can be used if there is no enough NVM space(see examples below): 
 ```c++
-// for dash-tpcc 
+// in dash/src/dash.cpp(branch tpcc)
 static const size_t pool_size = 1024ul * 1024ul * 1024ul * 16ul;
 size_t segment_number = 2048 * 32; // for tpcc
 ```
