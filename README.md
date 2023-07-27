@@ -23,6 +23,8 @@ source build.sh
 ```
 For more information, please refer to https://github.com/baotonglu/dash. 
 
+If installing Dash is difficult, you can use Rust indexes directly to test Falcon.
+
 ## Settings
 
 We use NVM in DAX mode enabled with the following commands.
@@ -98,9 +100,7 @@ test_ycsb_scal() # 35 test cases
 test_tpcc_scal() # 35 test cases
 ```
 
-Note: For YCSB-F (ZipFan) with small workloads, Falcon (DRAM Index) may not perform efficiently due to concurrency conflicts. If you encounter any issues with this experiment, it is recommended to use the full workloads. Other experiments show similar performance between small and full workloads.
-
-Without Dash, use `run_dram_test.py`, `collect_dram.py` and `result_dram.xlsx` instead.
+If you can’t install Dash, use `run_rust_only_test.py`, `collect_rust_only.py` and `result_rust_only.xlsx` instead.
 
 ## Recovery
 
