@@ -13,7 +13,7 @@ After installing Rust, run `cargo build` to build Falcon. Make sure you can down
 
 Init Dash:
 ```bash
-git submodule update --remote
+git pull --recurse-submodules
 source build.sh
 ```
 or
