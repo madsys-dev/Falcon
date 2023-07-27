@@ -99,7 +99,7 @@ def test_ycsb_scal_dram_only():
         ],
         "buffer": [
             sysname["Falcon"], sysname["Inp"],
-            sysname["Inp(Small Log Window)"],            
+            sysname["Falcon(All Flush)"],            
             sysname["Inp(No Flush)"],
             sysname["Inp(Hot Tuple Cache)"],
         ],
@@ -130,7 +130,7 @@ def test_tpcc_scal_dram_only():
         ],
         "buffer": [
             sysname["Falcon"], sysname["Inp"],
-            sysname["Inp(Small Log Window)"],            
+            sysname["Falcon(All Flush)"],            
             sysname["Inp(No Flush)"],
             sysname["Inp(Hot Tuple Cache)"],
         ],

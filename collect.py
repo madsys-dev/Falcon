@@ -84,7 +84,10 @@ collect_csv += "sysname,new_order-avg,new_order-95,payment-avg,payment-95\n"
 
 for sysname in sysnames:
     collect_csv += sysname
-    collect_csv += "," + ",".join(tpcc[sysname])
+    try:
+        collect_csv += "," + ",".join(tpcc[sysname])
+    except:
+        pass
     collect_csv += "\n"
 collect_csv += "\n"
 
@@ -125,11 +128,11 @@ collect_csv += "TPCC-scal \n"
 collect_csv += "threads," + ",".join(sysnames) + "\n"
 for thread in ["1", "2", "4", "8", "16", "32", "48"]:
     collect_csv += thread
-    try:
-        for sysname in sysnames:
+    for sysname in sysnames:
+        try:
             collect_csv += "," + str(tpcc[sysname][thread])
-    except: 
-        pass
+        except: 
+            collect_csv += ","
     collect_csv += "\n"
 collect_csv += "\n"
 
@@ -150,11 +153,11 @@ for workload in ["0", "0.99"]:
     collect_csv += "threads," + ",".join(sysnames) + "\n"
     for thread in ["1", "2", "4", "8", "16", "32", "48"]:
         collect_csv += thread
-        try:
-            for sysname in sysnames:
+        for sysname in sysnames:
+            try:
                 collect_csv += "," + str(ycsb[sysname][thread])
-        except:
-            pass
+            except: 
+                collect_csv += ","
         collect_csv += "\n"
     collect_csv += "\n"
 

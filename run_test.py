@@ -3,7 +3,7 @@
 import os
 import copy
 import re
-from configure import numa_set
+from configure import numa_set, pm_index
 
 
 k = 0
@@ -16,7 +16,7 @@ sysname = {
     "Outp": ["n2db_append", "clwb_tuple"],
     "ZenS": ["zen_local", "clwb_tuple"],
     "ZenS(No Flush)": ["zen_local"],
-    "Inp(Small Log Window)": ["n2db_local", "clwb_tuple", "ilog"],            
+    # "Inp(Small Log Window)": ["n2db_local", "clwb_tuple", "ilog"],            
     "Inp(No Flush)": ["n2db_local"],
     "Inp(Hot Tuple Cache)": ["n2db_local", "clwb_delta", "clwb_tuple", "hot_unflush"],
     "Unknown": []
@@ -154,7 +154,7 @@ def run_test(features, workload, result_path):
     txt += " --no-default-features --release -- --nocapture"
     print("test cmd: " + txt)
     text = ""
-    r = os.popen("rm /mnt/pmem1/pmem_hash.data")
+    r = os.popen("rm %s"%pm_index)
     # r = os.popen(txt)
     text = TIMEOUT_COMMAND(txt, 600)
     if text == None:
@@ -382,7 +382,7 @@ def test_ycsb_scal():
         ],
         "buffer": [
             sysname["Falcon"], sysname["Inp"],
-            sysname["Inp(Small Log Window)"],            
+            sysname["Falcon(All Flush)"],            
             sysname["Inp(No Flush)"],
             sysname["Inp(Hot Tuple Cache)"],
         ],
@@ -414,7 +414,7 @@ def test_tpcc_scal():
         ],
         "buffer": [
             sysname["Falcon"], sysname["Inp"],
-            sysname["Inp(Small Log Window)"],            
+            sysname["Falcon(All Flush)"],         
             sysname["Inp(No Flush)"],
             sysname["Inp(Hot Tuple Cache)"],
         ],
@@ -424,11 +424,11 @@ def test_tpcc_scal():
 
 if __name__ == "__main__":
 
-    test_ycsb_nvm()
-    test_ycsb_dram()
+    # test_ycsb_nvm() # 10 test cases
+    # test_ycsb_dram() # 6 test cases
 
-    test_tpcc_nvm()
-    test_tpcc_dram()
+    test_tpcc_nvm() # 60 test cases
+    # test_tpcc_dram() # 36 test cases
 
-    test_ycsb_scal()
-    test_tpcc_scal()
+    test_ycsb_scal() # 35 test cases
+    test_tpcc_scal() # 35 test cases

@@ -84,7 +84,10 @@ collect_csv += "sysname,new_order-avg,new_order-95,payment-avg,payment-95\n"
 
 for sysname in sysnames:
     collect_csv += sysname
-    collect_csv += "," + ",".join(tpcc[sysname])
+    try:
+        collect_csv += "," + ",".join(tpcc[sysname])
+    except:
+        pass
     collect_csv += "\n"
 collect_csv += "\n"
 
