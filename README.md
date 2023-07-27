@@ -23,42 +23,36 @@ source build.sh
 ```
 For more information, please refer to https://github.com/baotonglu/dash. 
 
-## Setting
+## Settings
 
-We use NVM in DAX mode. If you don't have one, refer the instructions below.
+We use NVM in DAX mode enabled with the following commands.
 ```bash
 mkfs-xfs -m reflink=0 -f /dev/pmem0
 mount -t xfs /dev/pmem0 /mnt/pmem0 -o dax
 ```
 
-To quickly make certain settings, update and run `configure.py`.
+### Step1: Setting Database File and Index File path
 
-### Database File and Index File path
-
-NVM file path need to be set, see in `src/custor_config.rs`:
+Set the path for database file and index file in `configure.py`:
 ``` bash
-pub const NVM_FILE_PATH: &str = "your database file path";
-pub const INDEX_FILE_PATH: &str = "persist index file path";
+db_file_path = "database file path"
+pm_index = "persist index file path"
 ```
 
-### Pin Threads to Core
+### Step2: Pin Threads to Core
 
-We use taskset to run Falcon in a single NUMA node. Use `numactl -H` to check your own hardware. **Make sure the CPU and NVM file are the same numa node.**
+Falcon use `taskset` to pin threads to a single NUMA node. Use `numactl -H` to check your own hardware. **Make sure the CPU and NVM file at the same numa node.**
 
-Here are the changes, along with some examples:
+Set the numa information in `configure.py` (see examples below):
 ``` bash
-tpcc/ycsb/store.sh:
-
-taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96 ... # Database File and Index File saved in numa node 0 and numa node 0 includes even cores
-taskset -c 26-51,78-103 ...   # Database File and Index File saved in numa node 1 and numa node 1 includes cores 26~51 and 78~103
-
-#---------------------------------------------------------------
-
-configure.py:
-
-numa_set = "taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96"
-numa_set = "taskset -c 26-51,78-103"
+numa_set = "taskset -c 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96" # Database File and Index File saved in numa node 0 and numa node 0 includes even cores
 ```
+or
+```python
+numa_set = "taskset -c 26-51,78-103" # Database File and Index File saved in numa node 1 and numa node 1 includes cores 26~51 and 78~103
+```
+
+### Step3: Run `configure.py`
 
 ## Quick start
 
