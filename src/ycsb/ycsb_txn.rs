@@ -38,6 +38,9 @@ impl<'a> YcsbTxn<'a> {
                 Ok(tid) => {
                     // #[cfg(feature = "txn_clock")]
                     // self.timer.start(READING);
+                    if tid.get_address() < crate::config::NVM_ADDR {
+                        return false;
+                    }
                     match self.txn.read_column(table, &tid, column) {
                         Ok(vec) => {
                             self.read_buf = vec.data[0];
@@ -103,6 +106,9 @@ impl<'a> YcsbTxn<'a> {
 
     pub fn update(&mut self, table: &'a Table, key: u64, column: usize, data: &[u8]) -> bool {
         match table.search_tuple_id(&IndexType::Int64(key)) {
+            if tid.get_address() < crate::config::NVM_ADDR {
+                return false;
+            }
             Ok(tid) => match self.txn.update(table, &tid, column, data) {
                 Ok(_) => return true,
                 Err(e) => {
