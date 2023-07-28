@@ -106,14 +106,17 @@ impl<'a> YcsbTxn<'a> {
 
     pub fn update(&mut self, table: &'a Table, key: u64, column: usize, data: &[u8]) -> bool {
         match table.search_tuple_id(&IndexType::Int64(key)) {
-            if tid.get_address() < crate::config::NVM_ADDR {
-                return false;
-            }
-            Ok(tid) => match self.txn.update(table, &tid, column, data) {
+            
+            Ok(tid) => {
+                if tid.get_address() < crate::config::NVM_ADDR {
+                    return false;
+                }
+                match self.txn.update(table, &tid, column, data) {
                 Ok(_) => return true,
                 Err(e) => {
                     self.result = Err(e);
                     return false;
+                }
                 }
             },
             _ => {
