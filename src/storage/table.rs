@@ -26,7 +26,7 @@ use std::convert::TryInto;
 use std::str;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
-
+use concurrent_map::ConcurrentMap;
 use super::global::*;
 use super::row::BufferVec;
 pub mod buffer;
@@ -43,12 +43,14 @@ type Index<T> = DashMap<T, TupleId>;
 type Index<u64> = NBTree<u64>;
 #[cfg(feature = "dash")]
 type Index<u64> = Dash<u64>;
+
+#[cfg(feature = "rust_map")]
+type RangeIndex<T> = ConcurrentMap<T, TupleId>;
+
 #[cfg(feature = "local_allocator")]
 type TupleAllocator = LocalPageAllocator;
-
 #[cfg(feature = "center_allocator")]
 type TupleAllocator = DualPageAllocator;
-
 #[derive(Debug)]
 pub enum TableIndex {
     Int64(Index<u64>),
@@ -56,8 +58,22 @@ pub enum TableIndex {
     String(DashString),
     #[cfg(not(feature = "dash"))]
     String(Index<String>),
+    Int64R(RangeIndex<u64>),
+    StringR(RangeIndex<String>),
+    
     None,
 }
+
+// impl std::fmt::Debug for TableIndex {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match &self {
+//             &TableIndex::Int64(index) => {index.fmt(f)}
+//             &TableIndex::String(index) => {index.fmt(f)}
+//             _ => {f.write_str("index debug not support")}
+            
+//         }
+// 	}
+// }
 #[derive(Debug)]
 pub enum IndexType {
     Int64(u64),
@@ -140,7 +156,6 @@ impl TupleId {
 /// --------------------------------------------------------------------
 /// |  bitmap  | tuple1(tuple_size bytes) | tuple2(tuple_size bytes)|……｜
 ///
-
 #[derive(Debug)]
 pub struct Table {
     pub schema: TableSchema,
@@ -352,6 +367,15 @@ impl Table {
         }
         self.add_index(key)
     }
+    pub fn set_range_primary_key(&mut self, key: usize) -> Result {
+        // let mut p = self.primary_key.write().unwrap();
+        self.primary_key
+            .store(key, std::sync::atomic::Ordering::SeqCst);
+        if self.index.contains_key(&key) {
+            return Ok(());
+        }
+        self.add_range_index(key)
+    }
     pub fn get_primary_key(&self) -> usize {
         self.primary_key.load(Ordering::Relaxed)
     }
@@ -379,6 +403,31 @@ impl Table {
                 index.insert(key, TableIndex::String(DashString::new()));
                 #[cfg(feature = "lock_index")]
                 index.insert(key, RwLock::new(TableIndex::String(Index::<String>::new())));
+            }
+            _ => return Err(Error::Tuple(TupleError::IndexTypeNotSupported)),
+        }
+        // let mut index_key = self.index_key.write().unwrap();
+        // index_key.push(key);
+        Ok(())
+    }
+    pub fn add_range_index_by_name(&mut self, key: &str) -> Result {
+        self.add_range_index(self.schema.search_by_name(key).unwrap())
+    }
+    pub fn add_range_index(&mut self, key: usize) -> Result {
+        if self.index.contains_key(&key) {
+            return Ok(());
+        }
+        let key_type = self.schema.columns()[key].type_;
+        println!("add_range_ndex_on {}", self.schema.columns()[key].name);
+        let index = &mut self.index;
+        match key_type {
+            ColumnType::Int64 => {
+                #[cfg(feature = "rust_map")]
+                index.insert(key, TableIndex::Int64R(RangeIndex::<u64>::default()));
+            }
+            ColumnType::String { len: _ } => {
+                #[cfg(feature = "rust_map")]
+                index.insert(key, TableIndex::StringR(RangeIndex::<String>::default()));
             }
             _ => return Err(Error::Tuple(TupleError::IndexTypeNotSupported)),
         }

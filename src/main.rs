@@ -13,16 +13,14 @@
 // use chrono::prelude::*;
 
 // use n2db::c::ffi::{init, plus};
-use bztree::BzTree;
+use concurrent_map::ConcurrentMap;
 
 fn main() {
-    let tree = BzTree::new();
-    let guard = crossbeam_epoch::pin();
-
-    let key1 = "key_1".to_string();
-    assert!(tree.insert(key1.clone(), 1, &guard));
-    assert!(!tree.insert(key1.clone(), 5, &guard));
-    tree.upsert(key1.clone(), 10, &guard);
+    let tree = ConcurrentMap::<u64, u64>::default();
+    assert_eq!(tree.insert(3, 1), None);
+    assert_eq!(tree.insert(3, 5), Some(1));
+    tree.insert(6, 10);
+    tree.insert(9, 12);
 
     // assert!(matches!(tree.delete(&key1, &guard), Some(&10)));
 
@@ -39,13 +37,16 @@ fn main() {
     // }
     // }, &guard));
     // assert!(matches!(tree.get(&key2, &guard), None));
-    tree.insert("key1".to_string(), 1, &guard);
-    tree.insert("key2".to_string(), 2, &guard);
-    println!("{:?}", tree.first(&guard));
-    tree.pop_first(&guard);
-    println!("{:?}", tree.first(&guard));
-    tree.pop_first(&guard);
-    println!("{:?}", tree.first(&guard));
+
+    let r1: Vec<_> = tree.range(2..8).collect();
+    println!("{:?}", r1);
+
+    println!("{:?}", tree.first());
+    tree.pop_first();
+    println!("{:?}", tree.first());
+    tree.pop_first();
+    println!("{:?}", tree.first());
+    
     // ------------datetime------
     // let dt = Local::now();
     // println!("dt: {}", dt);

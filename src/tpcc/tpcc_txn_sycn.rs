@@ -205,7 +205,7 @@ pub fn run_new_order<'a>(
         tuple.save_u64(8, did);
         tuple.save_u64(16, wid);
         tuple.save_u64(24, olid);
-        tuple.save_u64(32, ol_iid);
+        tuple.save_u64(32, order_line_key(wid, did, oid, ol_iid));
 
         if IS_FULL_SCHEMA {
             tuple.save_u64(40, 0); //OL_SUPPLY_WID
@@ -214,6 +214,7 @@ pub fn run_new_order<'a>(
             tuple.save_f64(64, _ol_amount);
             tuple.save_u64(72, 0);
         }
+        order_lines.index_insert(IndexType::Int64(order_line_key(wid, did, oid, ol_iid)), &TupleId::from_address(tuple._address())).unwrap();
     }
 
     txn.commit()
@@ -386,6 +387,54 @@ pub fn run_payment<'a>(
             tuple.save(32, &h_amount.to_le_bytes());
         }
     }
+    if txn.commit() {
+        return true;
+    }
+    return false;
+}
+pub fn run_stock_level<'a>(
+    txn: &mut Transaction<'a>,
+    table_list: &'a TableList,
+    stock_level: &TpccQuery,
+) -> bool {
+    txn.begin();
+    let districts = &table_list.districts;
+    let district: TupleVec;
+    let wid = stock_level.wid;
+    let did = stock_level.did;
+
+    // 1.获取街区表 d_next_o_id;
+    let d_tid: TupleId;
+    match districts.search_tuple_id(&IndexType::Int64(district_key(wid, did))) {
+        Ok(tid) => match txn.read(districts, &tid) {
+            Ok(row) => {
+                d_tid = tid;
+                district = row;
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        },
+        _ => {
+            txn.abort();
+            return false;
+        }
+    }
+    let schema = &districts.schema;
+    let column: usize = schema.search_by_name("D_NEXT_O_ID").unwrap();
+    let d_next_o_id = u64::from_le_bytes(
+        district
+            .get_column_by_id(schema, column)
+            .try_into()
+            .unwrap(),
+    );
+
+    // 2.获取街区内20个订单库存不足的去重货物种类数量
+    let min_orderline_key = order_line_key(wid, did, d_next_o_id-1, MAX_LINES_PER_ORDER);
+    let max_orderline_key = order_line_key(wid, did, d_next_o_id-20, 1);
+    
+
     if txn.commit() {
         return true;
     }

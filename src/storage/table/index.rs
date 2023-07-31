@@ -65,6 +65,15 @@ impl Table {
                         return Err(Error::Tuple(TupleError::KeyNotMatched));
                     }
                 },
+                #[cfg(feature = "rust_map")]
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u) {
+                    Some(v) => {
+                        result = Ok(v.clone());
+                    }
+                    None => {
+                        return Err(Error::Tuple(TupleError::KeyNotMatched));
+                    }
+                },
                 #[cfg(any(feature = "nbtree"))]
                 (TableIndex::String(index), IndexType::String(u)) => {
                     return Err(Error::Tuple(TupleError::IndexNotBuilt))
@@ -190,6 +199,18 @@ impl Table {
                         }
                     }
                 }
+                #[cfg(feature = "rust_map")]
+                TableIndex::Int64R(index) => {
+                    match index.insert(
+                        u64::from_le_bytes(key.try_into().unwrap()),
+                        TupleId::from_address(new_address),
+                    ) {
+                        Some(v) => {}
+                        None => {
+                            return Err(Error::Tuple(TupleError::KeyNotMatched));
+                        }
+                    }
+                }
                 #[cfg(not(any(feature = "dash", feature = "nbtree")))]
                 TableIndex::String(index) => {
                     match index.get(&String::from(str::from_utf8(key).unwrap())) {
@@ -226,6 +247,7 @@ impl Table {
                         }
                     }
                 }
+                
                 _ => {}
             }
         }
@@ -287,6 +309,22 @@ impl Table {
                         }
                     }
                 }
+                #[cfg(feature = "rust_map")]
+                TableIndex::Int64R(index) => {
+                    match index.get(&u64::from_le_bytes(key.try_into().unwrap())) {
+                        Some(v) => {
+                            if v.get_address() == pool_address {
+                                v.update(new_address);
+                            }
+                            // else {
+                            //     println!("{}, {}", v.get_address(), pool_address)
+                            // }
+                        }
+                        None => {
+                            return Err(Error::Tuple(TupleError::KeyNotMatched));
+                        }
+                    }
+                }
                 #[cfg(not(any(feature = "nbtree", feature = "dash")))]
                 TableIndex::String(index) => {
                     match index.get(&String::from(str::from_utf8(key).unwrap())) {
@@ -334,6 +372,11 @@ impl Table {
                 #[cfg(any(feature = "nbtree"))]
                 (TableIndex::String(index), IndexType::String(u)) => {
                     return Err(Error::Tuple(TupleError::IndexNotBuilt))
+                }
+                #[cfg(feature = "rust_map")]
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => {
+                    // println!("{}, {:?}", u, value);
+                    index.insert(u, value.clone());
                 }
                 (TableIndex::None, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
                 _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
@@ -394,6 +437,13 @@ impl Table {
                     TableIndex::String(index) => {
                         index.insert(String::from(str::from_utf8(key).unwrap()), tuple_id.clone());
                     }
+                    #[cfg(feature = "rust_map")]
+                    TableIndex::Int64R(index) => {
+                        index.insert(
+                            u64::from_le_bytes(key.try_into().unwrap()),
+                            tuple_id.clone(),
+                        );
+                    }
                     _ => {
                         return Err(Error::Tuple(TupleError::IndexNotBuilt));
                     }
@@ -443,6 +493,12 @@ impl Table {
                         let key = key.trim_end_matches(char::from(0));
                         index.remove(key.clone(), key.len());
                     }
+                    #[cfg(feature = "rust_map")]
+                    TableIndex::Int64R(index) => {
+                        index.remove(
+                            &u64::from_le_bytes(key.try_into().unwrap()),
+                        );
+                    }
                     _ => {
                         return Err(Error::Tuple(TupleError::IndexNotBuilt));
                     }
@@ -470,5 +526,46 @@ impl Table {
     pub fn search_tuple_id(&self, key: &IndexType) -> Result<TupleId> {
         let k = self.primary_key.load(std::sync::atomic::Ordering::SeqCst); //read().unwrap();
         self.search_tuple_id_on_index(key, k)
+    }
+    /// [key_lower, key_upper)
+    pub fn range_tuple_id(&self, key_lower: &IndexType, key_upper: &IndexType) -> Result<Vec<TupleId>> {
+        let k = self.primary_key.load(std::sync::atomic::Ordering::SeqCst); //read().unwrap();
+        self.range_tuple_id_on_index(key_lower, key_upper, k)
+    }
+    /// [key_lower, key_upper)
+    pub fn range_tuple_id_on_index(&self, key_lower: &IndexType, key_upper: &IndexType, columns: usize) -> Result<Vec<TupleId>> {
+        // let index = self.index.read().unwrap();
+        // println!("key:{:?}, columns:{:?}, index:{:?}",key,columns,self.index);
+        let mut collect = Vec::new();
+        let result: Result<Vec<TupleId>>;
+
+        
+        let table_index = self.index.get(&columns).unwrap();
+        match (table_index, key_lower, key_upper) {
+            #[cfg(feature = "rust_map")]
+            (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
+                let r:Vec<_> = index.range(u..v).collect();
+                for (_, tuple_id) in r {
+                    collect.push(tuple_id);
+                }
+                result = Ok(collect);
+                
+            },
+            #[cfg(any(feature = "nbtree"))]
+            (TableIndex::String(index), IndexType::String(u)) => {
+                return Err(Error::Tuple(TupleError::IndexNotBuilt))
+            }
+            (TableIndex::None, _, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
+            _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
+        };
+
+        match result {
+            Ok(tuples) => {
+                return Ok(tuples);
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
     }
 }

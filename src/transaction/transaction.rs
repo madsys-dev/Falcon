@@ -930,4 +930,50 @@ mod tests {
             i = i + 1;
         }
     }
+
+    #[test]
+    fn test_range() {
+        let thread_id = 0;
+        let mut schema = TableSchema::new();
+        schema.push(ColumnType::Int64, "a");
+        schema.push(ColumnType::Int64, "b");
+        println!("Build schema");
+
+        NVMTableStorage::init_test_database();
+
+        Catalog::init_catalog();
+        let catalog = Catalog::global();
+        let mut buffer = TransactionBuffer::new(catalog, thread_id);
+        let table_name = "table1";
+        catalog.add_table(table_name, schema).unwrap();
+
+        catalog.set_range_primary_key(table_name, 0);
+        let table = &catalog.get_table(table_name);
+        // catalog.add_range_index_by_name(table_name, 1);
+        // txn1 add t1, t2
+
+        let mut transaction1 = Transaction::new(&mut buffer, false);
+        transaction1.begin();
+        println!("txn1 begin");
+
+        let tuple1_id = transaction1.insert(table, "2,6");
+        println!("insert t1 233 666");
+        let tuple2_id = transaction1.insert(table, "6,3");
+        println!("insert t2 666 233");
+        let tuple3_id = transaction1.insert(table, "3,2");
+        println!("insert t3 233 666");
+        let tuple4_id = transaction1.insert(table, "5,4");
+        println!("insert t4 666 233");
+        println!("tuple1 insert address: {}", tuple1_id.get_address());
+        println!("tuple2 insert address: {}", tuple2_id.get_address());
+        println!("tuple3 insert address: {}", tuple3_id.get_address());
+        println!("tuple4 insert address: {}", tuple4_id.get_address());
+        transaction1.commit();
+
+        let r = table.range_tuple_id(&IndexType::Int64(1), &IndexType::Int64(6)).unwrap();
+        let ret = vec![tuple1_id, tuple3_id, tuple4_id];
+        println!("{:?}", r);
+        assert_eq!(r, ret);
+
+    }
 }

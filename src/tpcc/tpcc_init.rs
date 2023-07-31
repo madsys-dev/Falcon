@@ -32,7 +32,10 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
                 if line.starts_with("INDEX") {
                     state = 2;
                     _column_name = &line[6..];
-                    // TODO
+                }
+                if line.starts_with("RINDEX") {
+                    state = 3;
+                    _column_name = &line[6..];
                 }
             }
             1 => {
@@ -68,6 +71,16 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
                 table_name = s[0];
                 println!("{}", table_name);
                 catalog.set_primary_key(table_name, 0);
+            }
+            3 => {
+                if line.len() < 5 {
+                    state = 0;
+                    continue;
+                }
+                let s: Vec<&str> = line[0..].split(",").collect();
+                table_name = s[0];
+                println!("{}", table_name);
+                catalog.set_range_primary_key(table_name, 3);
             }
             _ => {
                 assert!(false);

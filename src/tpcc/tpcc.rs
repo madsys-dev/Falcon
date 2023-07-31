@@ -264,7 +264,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
     let table1 = &Catalog::global().get_table("ORDER-LINE");
     let table2 = &Catalog::global().get_table("NEW-ORDER");
     // let index = TpccIndex::orders_index();
-    // let index1 = TpccIndex::order_lines_index();
+    // let table1 = TpccIndex::order_lines_index();
     // let index2 = TpccIndex::new_orders_index();
     let cids = permutation_rand(rng, 1, CUSTOMERS_PER_DISTRICT);
     let mut s = String::new();
@@ -295,7 +295,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
                 append_u64(&mut s, order_key(wid, did, oid));
                 append_u64(&mut s, did);
                 append_u64(&mut s, wid);
-                append_u64(&mut s, olid);
+                append_u64(&mut s, order_line_key(wid, did, oid, olid));
                 //println!("Insert order line {},{},{},{}", wid, did, oid, olid);
                 append_u64(&mut s, u64_rand(rng, 1, ITEMS) - 1);
                 // OL_SUPPLY_W_ID
@@ -344,11 +344,11 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
                 append_u64(&mut s, order_key(wid, did, oid));
                 append_u64(&mut s, did);
                 append_u64(&mut s, wid);
-                append_u64(&mut s, olid);
+                append_u64(&mut s, order_line_key(wid, did, oid, olid));
                 //println!("Insert order line {},{},{},{}", wid, did, oid, olid);
                 append_u64(&mut s, u64_rand(rng, 1, ITEMS) - 1);
                 txn.insert(table1, &s);
-                // index1.add(order_line_key(wid, did, oid, olid), txn.insert(table1, &s));
+                // table1.add_range_index(order_line_key(wid, did, oid, olid), txn.insert(table1, &s));
                 s = String::new();
                 s.reserve(60);
             }

@@ -127,6 +127,8 @@ pub struct Catalog {
     clog: Clog,
     snapshot: SnapShot,
 }
+unsafe impl Send for Catalog {}
+unsafe impl Sync for Catalog {}
 
 pub static CATALOG: OnceCell<Catalog> = OnceCell::new();
 
@@ -292,6 +294,23 @@ impl Catalog {
         let mut table_index = self.table_index.write().unwrap();
         table_index.insert(String::from(table_name), Arc::new(new_table));
     }
+    pub fn set_range_primary_key(&self, table_name: &str, key: usize) {
+        let table = self.get_table(table_name);
+        let mut storage = NVMTableStorage::global_mut();
+        let table_address = storage.alloc_page().unwrap().page_start;
+        drop(storage);
+        //TODO Reload
+        let mut new_table = Table::new(table.schema.clone(), table.meta_page._address(), table.id);
+        println!("create table id = {}, name = {}", table.id, table_name);
+
+        for key in table.get_index_key() {
+            new_table.add_index(*key).unwrap();
+        }
+        new_table.set_range_primary_key(key).unwrap();
+
+        let mut table_index = self.table_index.write().unwrap();
+        table_index.insert(String::from(table_name), Arc::new(new_table));
+    }
     pub fn add_index_by_name(&self, table_name: &str, key: &str) {
         let table = self.get_table(table_name);
         let mut storage = NVMTableStorage::global_mut();
@@ -304,6 +323,23 @@ impl Catalog {
             new_table.add_index(*key).unwrap();
         }
         new_table.add_index_by_name(key).unwrap();
+        new_table.set_primary_key(table.get_primary_key()).unwrap();
+
+        let mut table_index = self.table_index.write().unwrap();
+        table_index.insert(String::from(table_name), Arc::new(new_table));
+    }
+    pub fn add_range_index_by_name(&self, table_name: &str, key: &str) {
+        let table = self.get_table(table_name);
+        let mut storage = NVMTableStorage::global_mut();
+        let table_address = storage.alloc_page().unwrap().page_start;
+        drop(storage);
+        //TODO Reload
+        let mut new_table = Table::new(table.schema.clone(), table_address, table.id);
+        println!("create table id = {}, name = {}", table.id, table_name);
+        for key in table.get_index_key() {
+            new_table.add_index(*key).unwrap();
+        }
+        new_table.add_range_index_by_name(key).unwrap();
         new_table.set_primary_key(table.get_primary_key()).unwrap();
 
         let mut table_index = self.table_index.write().unwrap();

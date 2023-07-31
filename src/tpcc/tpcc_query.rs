@@ -1,3 +1,5 @@
+use chrono::Local;
+
 use crate::storage::catalog::Catalog;
 use crate::storage::table::Table;
 use crate::tpcc::*;
@@ -33,6 +35,11 @@ pub struct TpccQuery {
     pub c_last: String,
     pub by_last: bool,
     pub h_amount: f64,
+    // STOCK-LEVEL
+    pub threshold: u64,
+    // DELEVER
+    pub o_carrier_id: u64,
+    pub ol_delivery_d: u64,
 }
 impl TpccQuery {
     fn wid_for_thread(rng: &mut ThreadRng, thread_id: u64) -> u64 {
@@ -88,6 +95,9 @@ impl TpccQuery {
             c_last: String::new(),
             by_last: false,
             h_amount: 0.00,
+            threshold: 0,
+            o_carrier_id: 0,
+            ol_delivery_d: 0,
         }
     }
     pub fn gen_payment(rng: &mut ThreadRng, thread_id: u64) -> Self {
@@ -128,6 +138,9 @@ impl TpccQuery {
             c_last: c_last,
             by_last: by_last,
             h_amount: h_amount,
+            threshold: 0,
+            o_carrier_id: 0,
+            ol_delivery_d: 0,
         }
     }
     pub fn gen_order_status(rng: &mut ThreadRng, thread_id: u64) -> Self {
@@ -154,33 +167,52 @@ impl TpccQuery {
             c_last: c_last,
             by_last: by_last,
             h_amount: 0.00,
+            threshold: 0,
+            o_carrier_id: 0,
+            ol_delivery_d: 0,
         }
     }
-    pub fn gen_diliver(rng: &mut ThreadRng, thread_id: u64) -> Self {
+    pub fn gen_stock_level(rng: &mut ThreadRng, thread_id: u64) -> Self {
         let wid = TpccQuery::wid_for_thread(rng, thread_id);
         let did = u64_rand(rng, 1, DISTRICTS_PER_WAREHOUSE) - 1;
-        let c_last: String;
-        let cid: u64;
-        let by_last = u64_rand(rng, 1, 100) <= 60;
-        if by_last {
-            c_last = lastname(nurand(rng, 255, 0, 999));
-            cid = CUSTOMERS_PER_DISTRICT;
-        } else {
-            c_last = String::new();
-            cid = nurand(rng, 1023, 1, CUSTOMERS_PER_DISTRICT) - 1;
-        }
+        let threshold = u64_rand(rng, 10, 20);
         TpccQuery {
             wid: wid,
             did: did,
-            cid: cid,
+            cid: 0,
             items: Vec::new(),
             entry_d: 0,
             c_wid: 0,
             c_did: 0,
-            c_last: c_last,
-            by_last: by_last,
+            c_last: String::new(),
+            by_last: false,
             h_amount: 0.00,
+            threshold: threshold,
+            o_carrier_id: 0,
+            ol_delivery_d: 0,
         }
+    }
+
+    pub fn gen_diliver(rng: &mut ThreadRng, thread_id: u64) -> Self {
+        let wid = TpccQuery::wid_for_thread(rng, thread_id);
+        let o_carrier_id = u64_rand(rng, 1, DISTRICTS_PER_WAREHOUSE);
+        let ol_delivery_d = Local::now().timestamp_nanos() as u64;
+        TpccQuery {
+            wid: wid,
+            did: 0,
+            cid: 0,
+            items: Vec::new(),
+            entry_d: 0,
+            c_wid: 0,
+            c_did: 0,
+            c_last: String::new(),
+            by_last: false,
+            h_amount: 0.00,
+            threshold: 0,
+            o_carrier_id: o_carrier_id,
+            ol_delivery_d: ol_delivery_d,
+        }
+        
     }
 }
 

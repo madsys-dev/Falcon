@@ -32,16 +32,17 @@ crossbeam = "0.8.1"
 parking_lot = "0.10.2"
 bztree = "0.2.0"
 crossbeam-epoch = "0.9.4"
+concurrent-map = "5.0.27"
 
 [features]
 
 # If you have set up Dash and want to use Dash index, change "rust_dash" to "dash".
-default = ["dash", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
+default = ["rust_dash", "rust_map", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
 
 option = ["ycsb_f", "sysname"]
 
 basic = ["dash", "nvm_server", "local_allocator", "serializable"]
-basic_dram = ["rust_dash", "nvm_server", "local_allocator", "serializable"]
+basic_dram = ["rust_dash", "rust_map", "nvm_server", "local_allocator", "serializable"]
 
 # choose one of system
 sysname = ["Falcon"]
@@ -90,6 +91,7 @@ index_bplus_tree = []
 lock_index = []
 nbtree = []
 dash = []
+rust_map = []
 
 # serializable: enable serializable snapshot isolation
 serializable = []
