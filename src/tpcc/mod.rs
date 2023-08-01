@@ -11,7 +11,6 @@ use once_cell::sync::OnceCell;
 use rand::{prelude::ThreadRng, *};
 
 /// [left, right]
-
 pub fn u64_rand(rng: &mut ThreadRng, lower_bound: u64, upper_bound: u64) -> u64 {
     // let mut rng = rand::thread_rng();
     rng.gen_range(lower_bound, upper_bound + 1)
@@ -163,7 +162,7 @@ pub fn customer_key(wid: u64, did: u64, cid: u64) -> u64 {
 pub fn cid_from_key(c_key: u64) -> u64 {
     c_key % CUSTOMERS_PER_DISTRICT
 }
-pub fn customer_last_key(c_last: String, wid: u64, did: u64) -> String {
+pub fn customer_last_key(c_last: &String, wid: u64, did: u64) -> String {
     let mut C_LAST_LEN: usize = 32;
     // if IS_FULL_SCHEMA {C_LAST_LEN = 16};
 

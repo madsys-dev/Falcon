@@ -153,11 +153,11 @@ pub fn init_table_customer(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
             append_string(&mut s, string_rand(rng, 8, 16));
             append_string(&mut s, String::from("OE"));
             if cid < 1000 {
-                append_string(&mut s, customer_last_key(lastname(cid), wid, did));
+                append_string(&mut s, customer_last_key(&lastname(cid), wid, did));
             } else {
                 append_string(
                     &mut s,
-                    customer_last_key(lastname(nurand(rng, 255, 0, 999)), wid, did),
+                    customer_last_key(&lastname(nurand(rng, 255, 0, 999)), wid, did),
                 );
             }
             // C_STREET_1
@@ -195,11 +195,11 @@ pub fn init_table_customer(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
             // println!("Insert customer {},{},{}", wid, did, cid);
             append_string(&mut s, String::from("OE"));
             if cid < 1000 {
-                append_string(&mut s, customer_last_key(lastname(cid), wid, did));
+                append_string(&mut s, customer_last_key(&lastname(cid), wid, did));
             } else {
                 append_string(
                     &mut s,
-                    customer_last_key(lastname(nurand(rng, 255, 0, 999)), wid, did),
+                    customer_last_key(&lastname(nurand(rng, 255, 0, 999)), wid, did),
                 );
             }
             append_string(&mut s, string_rand(rng, 2, 2));
@@ -227,7 +227,7 @@ pub fn init_table_history(buffer: &mut TransactionBuffer, wid: u64, did: u64, ci
     if IS_FULL_SCHEMA {
         for _ in 0..HISTORIES_PER_CUSTOMER {
             // println!("Insert history {},{},{},{}", wid, did, cid, i);
-            append_u64(&mut s, cid);
+            append_u64(&mut s, customer_key(wid, did, cid));
             append_u64(&mut s, did);
             append_u64(&mut s, wid);
             append_u64(&mut s, did);
@@ -243,7 +243,7 @@ pub fn init_table_history(buffer: &mut TransactionBuffer, wid: u64, did: u64, ci
     } else {
         for _ in 0..HISTORIES_PER_CUSTOMER {
             // println!("Insert history {},{},{},{}", wid, did, cid, i);
-            append_u64(&mut s, cid);
+            append_u64(&mut s, customer_key(wid, did, cid));
             append_u64(&mut s, did);
             append_u64(&mut s, wid);
             append_u64(&mut s, 0);
@@ -276,7 +276,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
             let cid = cids[oid as usize];
             // println!("Insert order {},{},{},{}", wid, did, cid, oid);
             append_u64(&mut s, order_key(wid, did, oid));
-            append_u64(&mut s, cid);
+            append_u64(&mut s, customer_key(wid, did, cid));
             append_u64(&mut s, did);
             append_u64(&mut s, wid);
             append_u64(&mut s, 0);
@@ -325,7 +325,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
             let cid = cids[oid as usize];
             // println!("Insert order {},{},{},{}", wid, did, cid, oid);
             append_u64(&mut s, order_key(wid, did, oid));
-            append_u64(&mut s, cid);
+            append_u64(&mut s, customer_key(wid, did, cid));
             append_u64(&mut s, did);
             append_u64(&mut s, wid);
             append_u64(&mut s, 0);

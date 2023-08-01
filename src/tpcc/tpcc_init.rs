@@ -88,6 +88,8 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
         }
     }
     catalog.add_index_by_name("CUSTOMER", "C_LAST");
+    catalog.set_primary_key("ORDER", 1);
+    catalog.set_range_primary_key("NEW-ORDER", 0);
     #[cfg(feature = "buffer_pool")]
     {
         catalog.set_pool_size("WAREHOUSE", 400000 as usize); // 2048

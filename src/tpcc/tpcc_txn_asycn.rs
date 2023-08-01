@@ -314,7 +314,7 @@ pub async fn run_payment<'a>(
     if by_last {
         let c_last = payment.c_last.clone();
         match customers.search_tuple_id_on_index(
-            &IndexType::String(customer_last_key(c_last, c_wid, c_did)),
+            &IndexType::String(customer_last_key(&c_last, c_wid, c_did)),
             schema.search_by_name("C_LAST").unwrap(),
         ) {
             Ok(tid) => {

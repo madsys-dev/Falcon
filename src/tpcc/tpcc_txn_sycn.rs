@@ -121,18 +121,20 @@ pub fn run_new_order<'a>(
     {
         let mut tuple = txn.alloc(orders);
         tuple.save_u64(0, order_key(wid, did, oid));
-        tuple.save_u64(8, cid);
+        tuple.save_u64(8, customer_key(wid, did, cid));
         tuple.save_u64(16, did);
         tuple.save_u64(24, wid);
         tuple.save_u64(32, entry_d);
         tuple.save_u64(40, 0);
         tuple.save_u64(48, ol_cnt);
         tuple.save_u64(56, all_local);
-
+        orders.index_insert(IndexType::Int64(customer_key(wid, did, cid)), &TupleId::from_address(tuple._address())).unwrap();
         let mut tuple = txn.alloc(new_orders);
         tuple.save_u64(0, order_key(wid, did, oid));
         tuple.save_u64(8, did);
         tuple.save_u64(16, wid);
+        new_orders.index_insert(IndexType::Int64(order_key(wid, did, oid)), &TupleId::from_address(tuple._address())).unwrap();
+
     }
 
     for olid in 0..ol_cnt {
@@ -317,7 +319,7 @@ pub fn run_payment<'a>(
     if by_last {
         let c_last = payment.c_last.clone();
         match customers.search_tuple_id_on_index(
-            &IndexType::String(customer_last_key(c_last, c_wid, c_did)),
+            &IndexType::String(customer_last_key(&c_last, c_wid, c_did)),
             schema.search_by_name("C_LAST").unwrap(),
         ) {
             Ok(tid) => match txn.read(customers, &tid) {
@@ -378,7 +380,7 @@ pub fn run_payment<'a>(
     }
     {
         let mut tuple = txn.alloc(histories);
-        tuple.save_u64(0, cid);
+        tuple.save_u64(0, customer_key(wid, did, cid));
         tuple.save_u64(8, c_did);
         tuple.save_u64(16, c_wid);
         if IS_FULL_SCHEMA {
@@ -458,7 +460,7 @@ pub fn run_stock_level<'a>(
         match txn.read(order_lines, &olid) {
             Ok(row) => {
                 
-                // re-count the consumption of items in this warehouse
+                // 去重统计本仓库item的消耗量
                 let column: usize = schema.search_by_name("OL_W_ID").unwrap();
                 let w_id = u64::from_le_bytes(
                     row.get_column_by_id(schema, column)
@@ -490,6 +492,7 @@ pub fn run_stock_level<'a>(
             }
         }
     }
+    // 3.检查库存
     let mut scnt = 0;
     for (item_id, _) in itemid2quantity.iter() {
         let stock: TupleColumnVec;
@@ -519,6 +522,129 @@ pub fn run_stock_level<'a>(
         }
     }
     assert!(scnt >= 0);
+    if txn.commit() {
+        return true;
+    }
+    return false;
+}
+
+pub fn run_order_status<'a>(
+    txn: &mut Transaction<'a>,
+    table_list: &'a TableList,
+    order_status: &TpccQuery,
+) -> bool {
+    txn.begin();
+    txn.read_only = true;
+    let orders = &table_list.orders;
+    let order_lines = &table_list.order_lines;
+    let customers = &table_list.customers;
+    let wid = order_status.wid;
+    let did = order_status.did;
+    let mut cid = order_status.cid;
+    let by_last = order_status.by_last;
+    let c_last = &order_status.c_last;
+    let customer: TupleVec;
+    let schema = &customers.schema;
+
+    // 1.获取顾客信息
+    if by_last {
+        match customers.search_tuple_id_on_index(
+            &IndexType::String(customer_last_key(c_last, wid, did)),
+            schema.search_by_name("C_LAST").unwrap(),
+        ) {
+            Ok(tid) => match txn.read(customers, &tid) {
+                Ok(row) => {                    customer = row;
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            },
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        cid = cid_from_key(u64::from_le_bytes(
+            customer
+                .get_column_by_id(schema, schema.search_by_name("C_ID").unwrap())
+                .try_into()
+                .unwrap(),
+        ));
+    } else {
+        match customers.search_tuple_id(&IndexType::Int64(customer_key(wid, did, cid))) {
+            Ok(tid) => match txn.read(customers, &tid) {
+                Ok(row) => {
+                    customer = row;
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            },
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+    }
+
+    // 2.获取客户最后的一次订单
+    let schema = &orders.schema;
+    let mut oid = 0;
+    match orders.search_tuple_id(&IndexType::Int64(customer_key(wid, did, cid))) {
+        Ok(tid) => match txn.read(orders, &tid) {
+            Ok(row) => {
+                oid = u64::from_le_bytes(
+                    row.get_column_by_id(schema, schema.search_by_name("O_ID").unwrap()).try_into().unwrap());
+                // 此处可根据row打印对应的order内容
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        },
+        _ => {
+            txn.abort();
+            return false;
+        }
+    }
+
+    // 3. 获取orderline信息
+    let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
+    let min_orderline_key = order_line_key(wid, did, oid, 1);
+    // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
+
+    let lines:Vec<TupleId>;
+    match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
+        Ok(l) => {
+            lines = l;
+        },
+        _ => {
+            txn.abort();
+            return false;
+        }
+    }
+    let schema = &order_lines.schema;
+    for olid in lines {
+        match txn.read(order_lines, &olid) {
+            Ok(row) => {       
+            // 此处可根据row_id打印对应的orderline内容
+                let column: usize = schema.search_by_name("OL_I_ID").unwrap();
+                let item_id = u64::from_le_bytes(
+                    row.get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                assert!(item_id <= ITEMS);
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+    }
+
     if txn.commit() {
         return true;
     }

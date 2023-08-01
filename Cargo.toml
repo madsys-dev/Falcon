@@ -37,9 +37,9 @@ concurrent-map = "5.0.27"
 [features]
 
 # If you have set up Dash and want to use Dash index, change "rust_dash" to "dash".
-default = ["rust_dash", "rust_map", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "payment_clock", "clwb_delta"]
+default = ["rust_dash", "rust_map", "nvm_server", "local_allocator", "serializable", "local_cc_cfg_occ", "option", "txn_clock", "order_status_clock", "clwb_delta"]
 
-option = ["ycsb_f", "sysname"]
+option = ["ycsb_f", "sysname", "tpcc"]
 
 basic = ["dash", "nvm_server", "local_allocator", "serializable"]
 basic_dram = ["rust_dash", "rust_map", "nvm_server", "local_allocator", "serializable"]
@@ -161,6 +161,8 @@ clwb_txn = []
 # tpcc: manual parameter configuration for TPCC
 payment_clock = []
 new_order_clock = []
+stock_level_clock = []
+order_status_clock = []
 tpcc = []
 
 

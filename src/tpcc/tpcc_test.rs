@@ -78,7 +78,7 @@ mod tests {
 
                 loop {
                     total = total + 1;
-                    let pr = u64_rand(&mut rng, 1, 92);
+                    let pr = u64_rand(&mut rng, 1, 96);
                     if pr <= 43 {
                         let query = TpccQuery::gen_payment(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]
@@ -105,13 +105,18 @@ mod tests {
                         timer.start(READING);
                         if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
                             num = num + 1;
+                            #[cfg(feature = "stock_level_clock")]
+                            timer.end(READING, READING);
                         }
+                            
                     } else if pr <= 96 {
                         let query = TpccQuery::gen_order_status(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]
                         timer.start(READING);
-                        if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
+                        if tpcc_txn_sycn::run_order_status(&mut txn, &tablelist, &query) {
                             num = num + 1;
+                            #[cfg(feature = "order_status_clock")]
+                            timer.end(READING, READING);
                         }
                     } else {
                         let query = TpccQuery::gen_diliver(&mut rng, i as u64);

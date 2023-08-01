@@ -359,7 +359,7 @@ impl Table {
             let table_index = self.index.get(&columns).unwrap();
             match (table_index, key) {
                 (TableIndex::Int64(index), IndexType::Int64(u)) => {
-                    index.insert(u, value.clone()).unwrap();
+                    index.insert(u, value.clone());
                 }
                 #[cfg(not(any(feature = "nbtree", feature = "dash")))]
                 (TableIndex::String(index), IndexType::String(u)) => {
