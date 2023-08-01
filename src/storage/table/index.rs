@@ -66,7 +66,7 @@ impl Table {
                     }
                 },
                 #[cfg(feature = "rust_map")]
-                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u) {
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u, &self.guard) {
                     Some(v) => {
                         result = Ok(v.clone());
                     }
@@ -201,9 +201,10 @@ impl Table {
                 }
                 #[cfg(feature = "rust_map")]
                 TableIndex::Int64R(index) => {
-                    match index.insert(
+                    match index.upsert(
                         u64::from_le_bytes(key.try_into().unwrap()),
                         TupleId::from_address(new_address),
+                        &self.guard
                     ) {
                         Some(v) => {}
                         None => {
@@ -311,7 +312,7 @@ impl Table {
                 }
                 #[cfg(feature = "rust_map")]
                 TableIndex::Int64R(index) => {
-                    match index.get(&u64::from_le_bytes(key.try_into().unwrap())) {
+                    match index.get(&u64::from_le_bytes(key.try_into().unwrap()), &self.guard) {
                         Some(v) => {
                             if v.get_address() == pool_address {
                                 v.update(new_address);
@@ -376,7 +377,7 @@ impl Table {
                 #[cfg(feature = "rust_map")]
                 (TableIndex::Int64R(index), IndexType::Int64(u)) => {
                     // println!("{}, {:?}", u, value);
-                    index.insert(u, value.clone());
+                    index.insert(u, value.clone(), &self.guard);
                 }
                 (TableIndex::None, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
                 _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
@@ -441,7 +442,8 @@ impl Table {
                     TableIndex::Int64R(index) => {
                         index.insert(
                             u64::from_le_bytes(key.try_into().unwrap()),
-                            tuple_id.clone(),
+                            tuple_id.clone(), &self.guard
+                            
                         );
                     }
                     _ => {
@@ -495,8 +497,9 @@ impl Table {
                     }
                     #[cfg(feature = "rust_map")]
                     TableIndex::Int64R(index) => {
-                        index.remove(
+                        index.delete(
                             &u64::from_le_bytes(key.try_into().unwrap()),
+                            &self.guard,
                         );
                     }
                     _ => {
@@ -544,9 +547,9 @@ impl Table {
         match (table_index, key_lower, key_upper) {
             #[cfg(feature = "rust_map")]
             (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
-                let r:Vec<_> = index.range(u..v).collect();
+                let r:Vec<_> = index.range(u..v, &self.guard).collect();
                 for (_, tuple_id) in r {
-                    collect.push(tuple_id);
+                    collect.push(tuple_id.clone());
                 }
                 result = Ok(collect);
                 

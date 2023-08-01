@@ -8,3 +8,5 @@ latency.txt
 Cargo.lock
 data.csv
 *.pyc
+perf.data
+perf.data.old

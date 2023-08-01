@@ -78,7 +78,8 @@ mod tests {
 
                 loop {
                     total = total + 1;
-                    if u64_rand(&mut rng, 1, 88) > 45 {
+                    let pr = u64_rand(&mut rng, 1, 92);
+                    if pr <= 43 {
                         let query = TpccQuery::gen_payment(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]
                         timer.start(READING);
@@ -88,7 +89,7 @@ mod tests {
                             #[cfg(feature = "payment_clock")]
                             timer.end(READING, READING);
                         }
-                    } else {
+                    } else if pr <= 88 {
                         let query = TpccQuery::gen_new_order(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]
                         timer.start(READING);
@@ -98,7 +99,29 @@ mod tests {
                             #[cfg(feature = "new_order_clock")]
                             timer.end(READING, READING);
                         }
+                    } else if pr <= 92 {
+                        let query = TpccQuery::gen_stock_level(&mut rng, i as u64);
+                        #[cfg(feature = "txn_clock")]
+                        timer.start(READING);
+                        if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
+                            num = num + 1;
+                        }
+                    } else if pr <= 96 {
+                        let query = TpccQuery::gen_order_status(&mut rng, i as u64);
+                        #[cfg(feature = "txn_clock")]
+                        timer.start(READING);
+                        if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
+                            num = num + 1;
+                        }
+                    } else {
+                        let query = TpccQuery::gen_diliver(&mut rng, i as u64);
+                        #[cfg(feature = "txn_clock")]
+                        timer.start(READING);
+                        if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
+                            num = num + 1;
+                        }
                     }
+                    
                     let end = SystemTime::now();
                     if end.duration_since(start).unwrap().ge(&total_time) {
                         break;

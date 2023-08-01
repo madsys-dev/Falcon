@@ -19,6 +19,7 @@ use super::row::BufferDataVec;
 use super::row::COMMIT_MASK;
 use crate::storage::allocator::{DualPageAllocator, LocalPageAllocator, Page};
 use crate::{Error, Result};
+use crossbeam_epoch::Guard;
 use dashmap::DashMap;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ use std::str;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use concurrent_map::ConcurrentMap;
+use bztree::BzTree;
 use super::global::*;
 use super::row::BufferVec;
 pub mod buffer;
@@ -45,13 +47,13 @@ type Index<u64> = NBTree<u64>;
 type Index<u64> = Dash<u64>;
 
 #[cfg(feature = "rust_map")]
-type RangeIndex<T> = ConcurrentMap<T, TupleId>;
+type RangeIndex<T> = BzTree<T, TupleId>;
 
 #[cfg(feature = "local_allocator")]
 type TupleAllocator = LocalPageAllocator;
 #[cfg(feature = "center_allocator")]
 type TupleAllocator = DualPageAllocator;
-#[derive(Debug)]
+// #[derive(Debug)]
 pub enum TableIndex {
     Int64(Index<u64>),
     #[cfg(feature = "dash")]
@@ -64,16 +66,16 @@ pub enum TableIndex {
     None,
 }
 
-// impl std::fmt::Debug for TableIndex {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match &self {
-//             &TableIndex::Int64(index) => {index.fmt(f)}
-//             &TableIndex::String(index) => {index.fmt(f)}
-//             _ => {f.write_str("index debug not support")}
+impl std::fmt::Debug for TableIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            &TableIndex::Int64(index) => {index.fmt(f)}
+            &TableIndex::String(index) => {index.fmt(f)}
+            _ => {f.write_str("index debug not support")}
             
-//         }
-// 	}
-// }
+        }
+	}
+}
 #[derive(Debug)]
 pub enum IndexType {
     Int64(u64),
@@ -168,6 +170,8 @@ pub struct Table {
     primary_key: AtomicUsize,
     #[cfg(not(feature = "lock_index"))]
     index: HashMap<usize, TableIndex>,
+    #[cfg(feature = "rust_map")]
+    guard: Guard,
     #[cfg(feature = "lock_index")]
     index: HashMap<usize, RwLock<TableIndex>>,
     // index_key: RwLock<Vec<usize>>,
@@ -223,6 +227,8 @@ impl Table {
             schema,
             primary_key: AtomicUsize::new(0),
             index: HashMap::new(),
+            #[cfg(feature = "rust_map")]
+            guard: crossbeam_epoch::pin(),
             #[cfg(feature = "local_allocator")]
             allocator: std::iter::from_fn(|| {
                 Some(RwLock::new(TupleAllocator::new(address, max_tuple as u32)))
@@ -268,6 +274,8 @@ impl Table {
             schema,
             primary_key: AtomicUsize::new(0),
             index: HashMap::new(),
+            #[cfg(feature = "rust_map")]
+            guard: crossbeam_epoch::pin(),
             // index_key: RwLock::new(Vec::new()),
             #[cfg(feature = "local_allocator")]
             allocator: std::iter::from_fn(|| {

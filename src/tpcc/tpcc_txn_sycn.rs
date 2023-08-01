@@ -1,5 +1,6 @@
 use crate::storage::catalog::Catalog;
 use crate::storage::row::*;
+use crate::storage::schema;
 use crate::storage::table::*;
 use crate::tpcc::tpcc_query::*;
 use crate::tpcc::*;
@@ -15,6 +16,7 @@ pub fn run_new_order<'a>(
 ) -> bool {
     // let mut txn = Transaction::new(buffer, false);
     txn.begin();
+    txn.read_only = false;
     let warehouses = &table_list.warehouses;
     let districts = &table_list.districts;
     let customers = &table_list.customers;
@@ -99,7 +101,9 @@ pub fn run_new_order<'a>(
     );
     let next_oid = oid + 1;
     match txn.update(districts, &tid, column, &next_oid.to_le_bytes()) {
-        Ok(_) => {}
+        Ok(_) => {
+            // println!("next_oid: {}", next_oid);
+        }
         _ => {
             txn.abort();
             return false;
@@ -204,8 +208,8 @@ pub fn run_new_order<'a>(
         tuple.save_u64(0, order_key(wid, did, oid));
         tuple.save_u64(8, did);
         tuple.save_u64(16, wid);
-        tuple.save_u64(24, olid);
-        tuple.save_u64(32, order_line_key(wid, did, oid, ol_iid));
+        tuple.save_u64(24, order_line_key(wid, did, oid, olid));
+        tuple.save_u64(32, ol_iid);
 
         if IS_FULL_SCHEMA {
             tuple.save_u64(40, 0); //OL_SUPPLY_WID
@@ -216,7 +220,7 @@ pub fn run_new_order<'a>(
         }
         order_lines.index_insert(IndexType::Int64(order_line_key(wid, did, oid, ol_iid)), &TupleId::from_address(tuple._address())).unwrap();
     }
-
+    // println!("add {} ol from {} to {}", next_oid, order_line_key(wid, did, oid, 0), order_line_key(wid, did, oid, ol_cnt));
     txn.commit()
 }
 pub fn run_payment<'a>(
@@ -226,6 +230,7 @@ pub fn run_payment<'a>(
 ) -> bool {
     // let mut txn = Transaction::new(buffer, false);
     txn.begin();
+    txn.read_only = false;
 
     let warehouses = &table_list.warehouses;
     let districts = &table_list.districts;
@@ -398,7 +403,10 @@ pub fn run_stock_level<'a>(
     stock_level: &TpccQuery,
 ) -> bool {
     txn.begin();
+    txn.read_only = true;
     let districts = &table_list.districts;
+    let order_lines = &table_list.order_lines;
+    let stocks = &table_list.stocks;
     let district: TupleVec;
     let wid = stock_level.wid;
     let did = stock_level.did;
@@ -429,12 +437,88 @@ pub fn run_stock_level<'a>(
             .try_into()
             .unwrap(),
     );
-
     // 2.获取街区内20个订单库存不足的去重货物种类数量
-    let min_orderline_key = order_line_key(wid, did, d_next_o_id-1, MAX_LINES_PER_ORDER);
-    let max_orderline_key = order_line_key(wid, did, d_next_o_id-20, 1);
-    
+    let max_orderline_key = order_line_key(wid, did, d_next_o_id-1, MAX_LINES_PER_ORDER);
+    let min_orderline_key = order_line_key(wid, did, d_next_o_id-20, 1);
+    // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
 
+    let lines:Vec<TupleId>;
+    match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
+        Ok(l) => {
+            lines = l;
+        },
+        _ => {
+            txn.abort();
+            return false;
+        }
+    }
+    let mut itemid2quantity = std::collections::HashMap::<u64, u64>::new();
+    let schema = &order_lines.schema;
+    for olid in lines {
+        match txn.read(order_lines, &olid) {
+            Ok(row) => {
+                
+                // re-count the consumption of items in this warehouse
+                let column: usize = schema.search_by_name("OL_W_ID").unwrap();
+                let w_id = u64::from_le_bytes(
+                    row.get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                if w_id == wid {
+                    let column: usize = schema.search_by_name("OL_QUANTITY").unwrap();
+                    let quantity = u64::from_le_bytes(
+                        row.get_column_by_id(schema, column)
+                            .try_into()
+                            .unwrap(),
+                    );
+                    let column: usize = schema.search_by_name("OL_I_ID").unwrap();
+                    let item_id = u64::from_le_bytes(
+                        row.get_column_by_id(schema, column)
+                            .try_into()
+                            .unwrap(),
+                    );
+                    if !itemid2quantity.contains_key(&item_id) {
+                        itemid2quantity.insert(item_id, 0);
+                    }
+                    itemid2quantity.insert(item_id, itemid2quantity.get(&item_id).unwrap() + quantity);
+                }
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+    }
+    let mut scnt = 0;
+    for (item_id, _) in itemid2quantity.iter() {
+        let stock: TupleColumnVec;
+        let schema = &stocks.schema;
+        let column = schema.search_by_name("S_QUANTITY").unwrap();
+        match stocks.search_tuple_id(&IndexType::Int64(stock_key(wid, *item_id))) {
+            Ok(tid) => {
+                match txn.read_column(stocks, &tid, column) {
+                    Ok(row) => {
+                        stock = row;
+                    }
+                    _ => {
+                        txn.abort();
+                        return false;
+                    }
+                }
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        let s_quantity =
+            u64::from_le_bytes(stock.data.as_slice().try_into().unwrap());
+        if s_quantity < stock_level.threshold {
+            scnt += 1;
+        }
+    }
+    assert!(scnt >= 0);
     if txn.commit() {
         return true;
     }
