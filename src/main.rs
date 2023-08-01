@@ -40,7 +40,7 @@ fn main() {
     // }, &guard));
     // assert!(matches!(tree.get(&key2, &guard), None));
 
-    let r1: Vec<_> = tree.range(2..8, &guard).collect();
+    let r1 = tree.range(2..8, &guard).last();
     println!("{:?}", r1);
 
     println!("{:?}", tree.first(&guard));

@@ -571,4 +571,37 @@ impl Table {
             }
         }
     }
+
+    pub fn last_range_tuple_id(&self, key_lower: &IndexType, key_upper: &IndexType) -> Result<TupleId> {
+        let k = self.primary_key.load(std::sync::atomic::Ordering::SeqCst); //read().unwrap();
+        self.last_tuple_id_on_index(key_lower, key_upper, k)
+    }
+    pub fn last_tuple_id_on_index(&self, key_lower: &IndexType, key_upper: &IndexType, columns: usize) -> Result<TupleId> {
+        // let index = self.index.read().unwrap();
+        // println!("key:{:?}, columns:{:?}, index:{:?}",key,columns,self.index);
+        let result: Result<TupleId>;
+        let table_index = self.index.get(&columns).unwrap();
+        match (table_index, key_lower, key_upper) {
+            #[cfg(feature = "rust_map")]
+            (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
+                let (_, tid) = index.range(u..v, &self.guard).next_back().unwrap();
+                result = Ok(TupleId::from_address(tid.get_address()));
+            },
+            #[cfg(any(feature = "nbtree"))]
+            (TableIndex::String(index), IndexType::String(u)) => {
+                return Err(Error::Tuple(TupleError::IndexNotBuilt))
+            }
+            (TableIndex::None, _, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
+            _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
+        };
+
+        match result {
+            Ok(tuple) => {
+                return Ok(tuple);
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
 }

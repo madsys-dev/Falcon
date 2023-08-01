@@ -145,7 +145,7 @@ pub const STOCKS_PER_WAREHOUSE: u64 = ITEMS;
 pub const DISTRICTS_PER_WAREHOUSE: u64 = 10;
 pub const CUSTOMERS_PER_DISTRICT: u64 = 3000;
 pub const HISTORIES_PER_CUSTOMER: u64 = 1;
-pub const ORDERS_PER_DISTRICT: u64 = CUSTOMERS_PER_DISTRICT;
+pub const ORDERS_PER_DISTRICT: u64 = 0x100_000_000; // 2 ^ 32
 pub const MAX_LINES_PER_ORDER: u64 = 15;
 pub fn item_key(iid: u64) -> u64 {
     iid

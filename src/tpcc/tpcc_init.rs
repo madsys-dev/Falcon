@@ -4,11 +4,6 @@ use crate::storage::schema::{ColumnType, TableSchema};
 
 use std::path::Path;
 
-use super::{
-    CUSTOMERS_PER_DISTRICT, DISTRICTS_PER_WAREHOUSE, HISTORIES_PER_CUSTOMER, ITEMS,
-    ORDERS_PER_DISTRICT, STOCKS_PER_WAREHOUSE, WAREHOUSES,
-};
-
 pub fn init_schema(file_name: impl AsRef<Path>) {
     let catalog = Catalog::global();
     let contents = std::fs::read_to_string(file_name).unwrap();
@@ -88,7 +83,9 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
         }
     }
     catalog.add_index_by_name("CUSTOMER", "C_LAST");
-    catalog.set_primary_key("ORDER", 1);
+    catalog.set_primary_key("ORDER", 0);
+    catalog.add_index_by_name("ORDER", "O_C_ID");
+
     catalog.set_range_primary_key("NEW-ORDER", 0);
     #[cfg(feature = "buffer_pool")]
     {

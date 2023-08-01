@@ -8,7 +8,7 @@ use crate::storage::row::Tuple;
 use crate::storage::row::*;
 use crate::storage::table::{Table, TupleId};
 use crate::storage::timestamp::TimeStamp;
-use crate::transaction::access::{AccessStruct, WriteSetStruct};
+use crate::transaction::access::{AccessStruct, WriteSetStruct, DELETE_COLUMN_FLAG};
 use crate::transaction::clog::*;
 use crate::transaction::snapshot::SnapShotEntity;
 use crate::transaction::transaction_buffer::*;
@@ -217,7 +217,6 @@ impl<'a> Transaction<'a> {
                 }
             }
         }
-
         #[cfg(all(not(feature = "cc_cfg_occ"), feature = "update_direct"))]
         {
             for ws in &self.write_set {
@@ -644,6 +643,26 @@ impl<'a> Transaction<'a> {
         }
     }
 
+    pub fn delete(&mut self,
+        table: &'a Table,
+        tuple_id: &TupleId,
+    ) -> Result<()> {
+        #[cfg(feature = "hot_unflush")]
+        let flush = self.flush_cache.access(tuple_id.get_address());
+        self.write_set.push(WriteSetStruct::new(
+            table,
+            tuple_id.clone(),
+            self.ts,
+            false,
+            DELETE_COLUMN_FLAG,
+            #[cfg(feature = "hot_unflush")]
+            flush,
+            Vec::new(),
+        ));
+        // #[cfg(feature = "clock")]
+        // self.timer.end(UPDATING, UPDATING);
+        return Ok(());
+    }
     pub fn read_column(
         &mut self,
         table: &'a Table,

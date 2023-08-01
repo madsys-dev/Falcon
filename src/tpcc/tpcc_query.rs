@@ -193,7 +193,7 @@ impl TpccQuery {
         }
     }
 
-    pub fn gen_diliver(rng: &mut ThreadRng, thread_id: u64) -> Self {
+    pub fn gen_deliver(rng: &mut ThreadRng, thread_id: u64) -> Self {
         let wid = TpccQuery::wid_for_thread(rng, thread_id);
         let o_carrier_id = u64_rand(rng, 1, DISTRICTS_PER_WAREHOUSE);
         let ol_delivery_d = Local::now().timestamp_nanos() as u64;

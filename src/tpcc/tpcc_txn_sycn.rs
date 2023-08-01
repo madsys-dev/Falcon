@@ -128,7 +128,7 @@ pub fn run_new_order<'a>(
         tuple.save_u64(40, 0);
         tuple.save_u64(48, ol_cnt);
         tuple.save_u64(56, all_local);
-        orders.index_insert(IndexType::Int64(customer_key(wid, did, cid)), &TupleId::from_address(tuple._address())).unwrap();
+        orders.index_insert_by_tuple(&TupleId::from_address(tuple._address()), &tuple).unwrap();
         let mut tuple = txn.alloc(new_orders);
         tuple.save_u64(0, order_key(wid, did, oid));
         tuple.save_u64(8, did);
@@ -212,7 +212,6 @@ pub fn run_new_order<'a>(
         tuple.save_u64(16, wid);
         tuple.save_u64(24, order_line_key(wid, did, oid, olid));
         tuple.save_u64(32, ol_iid);
-
         if IS_FULL_SCHEMA {
             tuple.save_u64(40, 0); //OL_SUPPLY_WID
             tuple.save_u64(48, Local::now().timestamp_nanos() as u64); //OL_DELIVERY_ID
@@ -220,7 +219,7 @@ pub fn run_new_order<'a>(
             tuple.save_f64(64, _ol_amount);
             tuple.save_u64(72, 0);
         }
-        order_lines.index_insert(IndexType::Int64(order_line_key(wid, did, oid, ol_iid)), &TupleId::from_address(tuple._address())).unwrap();
+        order_lines.index_insert(IndexType::Int64(order_line_key(wid, did, oid, olid)), &TupleId::from_address(tuple._address())).unwrap();
     }
     // println!("add {} ol from {} to {}", next_oid, order_line_key(wid, did, oid, 0), order_line_key(wid, did, oid, ol_cnt));
     txn.commit()
@@ -441,7 +440,7 @@ pub fn run_stock_level<'a>(
     );
     // 2.获取街区内20个订单库存不足的去重货物种类数量
     let max_orderline_key = order_line_key(wid, did, d_next_o_id-1, MAX_LINES_PER_ORDER);
-    let min_orderline_key = order_line_key(wid, did, d_next_o_id-20, 1);
+    let min_orderline_key = order_line_key(wid, did, d_next_o_id-20, 0);
     // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
 
     let lines:Vec<TupleId>;
@@ -592,7 +591,7 @@ pub fn run_order_status<'a>(
     // 2.获取客户最后的一次订单
     let schema = &orders.schema;
     let mut oid = 0;
-    match orders.search_tuple_id(&IndexType::Int64(customer_key(wid, did, cid))) {
+    match orders.search_tuple_id_on_index(&IndexType::Int64(customer_key(wid, did, cid)), schema.search_by_name("O_C_ID").unwrap()) {
         Ok(tid) => match txn.read(orders, &tid) {
             Ok(row) => {
                 oid = u64::from_le_bytes(
@@ -612,13 +611,14 @@ pub fn run_order_status<'a>(
 
     // 3. 获取orderline信息
     let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
-    let min_orderline_key = order_line_key(wid, did, oid, 1);
+    let min_orderline_key = order_line_key(wid, did, oid, 0);
     // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
 
     let lines:Vec<TupleId>;
     match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
         Ok(l) => {
             lines = l;
+            // assert!(lines.len() == 0 || lines.len() >= 5);
         },
         _ => {
             txn.abort();
@@ -630,6 +630,7 @@ pub fn run_order_status<'a>(
         match txn.read(order_lines, &olid) {
             Ok(row) => {       
             // 此处可根据row_id打印对应的orderline内容
+
                 let column: usize = schema.search_by_name("OL_I_ID").unwrap();
                 let item_id = u64::from_le_bytes(
                     row.get_column_by_id(schema, column)
@@ -649,4 +650,197 @@ pub fn run_order_status<'a>(
         return true;
     }
     return false;
+}
+
+pub fn run_deliver<'a>(
+    txn: &mut Transaction<'a>,
+    table_list: &'a TableList,
+    deliver: &TpccQuery,
+) -> bool {
+    let orders = &table_list.orders;
+    
+    let order_lines = &table_list.order_lines;
+    let new_orders = &table_list.new_orders;
+    let customers = &table_list.customers;
+    let wid = deliver.wid;
+
+
+    for did in 0..DISTRICTS_PER_WAREHOUSE { 
+
+        txn.begin();
+        txn.read_only = false;
+        let oid:u64;
+        let no_tid: TupleId;
+        // 1.查找最早的未交付订单
+        let max_order_key = order_key(wid, did, ORDERS_PER_DISTRICT);
+        let min_order_key = order_key(wid, did, 0);
+
+        match new_orders.last_range_tuple_id(&IndexType::Int64(min_order_key), &IndexType::Int64(max_order_key)) {
+            Ok(tid) => {
+                no_tid = tid;
+                match txn.read(new_orders, &no_tid) {
+                    Ok(row) => {
+                        let schema = &new_orders.schema;
+                        oid = u64::from_le_bytes(row.get_column_by_id(schema, schema.search_by_name("NO_O_ID").unwrap()).try_into().unwrap());
+                    }
+                    _ => {
+                        txn.abort();
+                        return false;
+                    }
+                }
+            },
+            _ => {
+                continue;
+            }
+        }
+
+        // 2.更新订单表, 获知用户id
+        let order: TupleVec;
+        let o_tid: TupleId;
+        let schema = &orders.schema;
+
+        match orders.search_tuple_id(&IndexType::Int64(oid)) {
+            Ok(tid) => match txn.read(orders, &tid) {
+                Ok(row) => {
+                    o_tid = tid;
+                    order = row;
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            },
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+
+        let column = schema.search_by_name("O_C_ID").unwrap();
+        let cid = u64::from_le_bytes(
+            order
+                .get_column_by_id(schema, column)
+                .try_into()
+                .unwrap(),
+        );
+
+
+        let column = schema.search_by_name("O_CARRIER_ID").unwrap();
+
+        match txn.update(orders, &o_tid, column, &deliver.o_carrier_id.to_le_bytes()) {
+            Ok(_) => {}
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        // 3. 更新orderline数据表
+        let oid = oid % ORDERS_PER_DISTRICT;
+        let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
+        let min_orderline_key = order_line_key(wid, did, oid, 0);
+        // println!("read {} old from {} to {}", oid, min_orderline_key, max_orderline_key);
+
+        let lines:Vec<TupleId>;
+        match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
+            Ok(l) => {
+                lines = l;
+                // println!("{:?}", lines);
+            },
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        let schema = &order_lines.schema;
+        let column: usize = schema.search_by_name("OL_DELIVERY_D").unwrap();
+        let mut ol_total:f64 = 0.0;
+        for olid in lines {
+            match txn.read(order_lines, &olid) {
+                Ok(row) => {
+                    let ol_amount = f64::from_le_bytes(
+                        row.get_column_by_id(schema, schema.search_by_name("OL_AMOUNT").unwrap())
+                        .try_into().unwrap());
+                    ol_total += ol_amount;
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            }
+            match txn.update(order_lines, &olid, column, &deliver.ol_delivery_d.to_le_bytes()) {
+                Ok(_) => {
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            }
+        }
+        //4. 更新客户表数据
+        let schema = &customers.schema;
+        let column: usize = schema.search_by_name("C_BALANCE").unwrap();
+        let c_tid: TupleId;
+        let customer: TupleVec;
+        match customers.search_tuple_id(&IndexType::Int64(cid)) {
+            Ok(tid) => match txn.read(customers, &tid) {
+                Ok(row) => {
+                    c_tid = tid;
+                    customer = row;
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
+            },
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        let c_balance = f64::from_le_bytes(
+            customer
+                .get_column_by_id(schema, column)
+                .try_into()
+                .unwrap(),
+        );
+        match txn.update(customers, &c_tid, column, &(c_balance + ol_total).to_le_bytes()) {
+            Ok(_) => {
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
+        let c_delevery = u64::from_le_bytes(
+            customer
+                .get_column_by_id(schema, column)
+                .try_into()
+                .unwrap(),
+        );
+        match txn.update(customers, &c_tid, column, &(c_delevery + 1).to_le_bytes()) {
+            Ok(_) => {
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        // 5. 删除neworder
+        match txn.delete(new_orders, &no_tid) {
+            Ok(_) => {
+            }
+            _ => {
+                txn.abort();
+                return false;
+            }
+        }
+        // println!("deilver {} success", did);
+        if !txn.commit() {
+            return false;
+        }
+    }
+    
+    // println!("deilver fail");
+    return true;
 }

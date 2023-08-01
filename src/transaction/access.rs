@@ -17,7 +17,7 @@ pub struct AccessStruct<'a> {
     pub tuple_id: TupleId,
     pub ts: TimeStamp,
 }
-
+pub const DELETE_COLUMN_FLAG: usize = 100000;
 impl<'a> AccessStruct<'a> {
     pub fn new(table: &'a Table, tuple_id: TupleId, ts: TimeStamp) -> Self {
         // println!("access {}", tuple_id.get_address());
@@ -106,7 +106,7 @@ impl<'a> WriteSetStruct<'a> {
         #[cfg(feature = "clock")]
         timer.start(UPDATING);
 
-        if !self.is_insert {
+        if !self.is_insert && self.column_id != DELETE_COLUMN_FLAG {
             let mut ret = self
                 .table
                 .fix_tuple(
@@ -127,8 +127,6 @@ impl<'a> WriteSetStruct<'a> {
                     self.flush,
                 )
                 .unwrap();
-            // #[cfg(feature = "cc_cfg_to")]
-            // {
             #[cfg(not(feature = "buffer_pool"))]
             {
                 #[cfg(feature = "append")]
@@ -183,7 +181,78 @@ impl<'a> WriteSetStruct<'a> {
             return ret;
         }
         // println!("ret 1111");
+        else if !self.is_insert {
+            let mut ret = self
+                .table
+                .del_tuple(
+                    &self.tuple_id,
+                    address,
+                    #[cfg(all(feature = "mvcc", feature = "ilog"))]
+                    d_delta_address,
+                    self.ts,
+                    thread_id,
+                    cur_min_txn,
+                    #[cfg(feature = "buffer_direct")]
+                    self.pointer,
+                    #[cfg(feature = "clock")]
+                    timer,
+                    #[cfg(feature = "hot_unflush")]
+                    self.flush,
+                )
+                .unwrap();
+            #[cfg(not(feature = "buffer_pool"))]
+            {
+                #[cfg(feature = "append")]
+                {
+                    self.tuple_id = TupleId::from_address(ret);
+                }
 
+                let tuple = self.table.get_tuple(&self.tuple_id);
+                #[cfg(not(feature = "cc_cfg_2pl"))]
+                assert_eq!(tuple.lock_tid(), self.ts.tid);
+                tuple.set_ts_tid(self.ts.tid);
+                // T
+                // file::sfence();
+                // debug!("cn {} {}", tuple._address(), self.ts.tid);
+                // tuple.set_lock_tid(0);
+            }
+            #[cfg(feature = "buffer_pool")]
+            {
+                self.tuple_id = TupleId::from_address(ret);
+
+                let vec = self
+                    .table
+                    .get_tuple_buffer(
+                        &self.tuple_id,
+                        thread_id,
+                        self.ts.tid,
+                        cur_min_txn,
+                        #[cfg(feature = "clock")]
+                        timer,
+                    )
+                    .0;
+                let tuple = vec.data.read();
+                // #[cfg(not(feature = "cc_cfg_2pl"))]
+                // assert_eq!(tuple.lock_tid(), self.ts.tid);
+                tuple.set_ts_tid(self.ts.tid);
+                // println!("{:?}", tuple.get_data(self.table.tuple_size));
+
+                // file::sfence();
+                // tuple.set_lock_tid(0);
+                return vec.nvm_id.load(Ordering::Relaxed);
+            }
+
+            // let tuple_nvm = Tuple::reload(tuple.n)
+            // }
+            #[cfg(feature = "clock")]
+            {
+                timer.total(UPDATING, tmp_index, UPDATING);
+            }
+            // println!("ret {}", ret);
+            // #[cfg(feature = "append")]
+            // { ret = 0; }
+            return ret;
+        }
         return self.table.get_address(&self.tuple_id);
     }
 

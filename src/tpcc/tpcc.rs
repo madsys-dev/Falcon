@@ -272,7 +272,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
 
     txn.begin();
     if IS_FULL_SCHEMA {
-        for oid in 0..ORDERS_PER_DISTRICT {
+        for oid in 0..CUSTOMERS_PER_DISTRICT {
             let cid = cids[oid as usize];
             // println!("Insert order {},{},{},{}", wid, did, cid, oid);
             append_u64(&mut s, order_key(wid, did, oid));
@@ -321,7 +321,7 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
             }
         }
     } else {
-        for oid in 0..ORDERS_PER_DISTRICT {
+        for oid in 0..CUSTOMERS_PER_DISTRICT {
             let cid = cids[oid as usize];
             // println!("Insert order {},{},{},{}", wid, did, cid, oid);
             append_u64(&mut s, order_key(wid, did, oid));

@@ -302,8 +302,8 @@ def test_tpcc_nvm():
             ["ycsb_a"], # only for compile
         ],
         "cc_cfg": [
-            ["local_cc_cfg_to"],
-            ["local_cc_cfg_2pl"],
+            # ["local_cc_cfg_to"],
+            # ["local_cc_cfg_2pl"],
             ["local_cc_cfg_occ"],
         ],  
         "mvcc": [
@@ -313,7 +313,7 @@ def test_tpcc_nvm():
         "buffer": [
             sysname["Falcon"], sysname["Falcon(No Flush)"],
             sysname["Falcon(All Flush)"], sysname["Inp"],
-            sysname["Outp"],
+            sysname["Outp"], sysname["Inp(Hot Tuple Cache)"]
         ],
         "clock": [
             ["txn_clock", "new_order_clock"],
@@ -423,11 +423,11 @@ def test_tpcc_scal():
 
 if __name__ == "__main__":
 
-    test_ycsb_nvm() # 10 test cases
-    test_ycsb_dram() # 6 test cases
+    # test_ycsb_nvm() # 10 test cases
+    # test_ycsb_dram() # 6 test cases
 
     test_tpcc_nvm() # 60 test cases
-    test_tpcc_dram() # 36 test cases
+    # test_tpcc_dram() # 36 test cases
 
-    test_ycsb_scal() # 35 test cases
-    test_tpcc_scal() # 35 test cases
+    # test_ycsb_scal() # 35 test cases
+    # test_tpcc_scal() # 35 test cases

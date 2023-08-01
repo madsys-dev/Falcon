@@ -218,7 +218,7 @@ impl Table {
             timer.end(READING, READING);
             // println!("lock {:x} {} {}", tuple_id.get_address(), lock_tid, ts.tid);
 
-            if cas_result != 0 {
+            if cas_result != 0 && cas_result != ts.tid {
                 return Err(TupleError::TupleChanged {
                     conflict_tid: cas_result,
                 }
