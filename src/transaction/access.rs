@@ -237,7 +237,7 @@ impl<'a> WriteSetStruct<'a> {
                 // #[cfg(not(feature = "cc_cfg_2pl"))]
                 // assert_eq!(tuple.lock_tid(), self.ts.tid);
                 tuple.set_ts_tid(self.ts.tid);
-                // println!("{:?}", tuple.get_data(self.table.tuple_size));
+                // println!("remove {:?}", self.tuple_id);
                 self.table.remove_tuple_buffer(&self.tuple_id, thread_id, &tuple).unwrap();
                 // file::sfence();
                 // tuple.set_lock_tid(0);

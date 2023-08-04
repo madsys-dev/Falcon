@@ -93,6 +93,8 @@ impl Table {
             .0;
         // #[cfg(feature = "buffer_pool")]
         // let tuple_pool = vec.data.write();
+        #[cfg(all(feature = "buffer_pool", feature = "delta"))]
+        let tuple = vec.data.read();
         #[cfg(feature = "buffer_pool")]
         let tuple_address = vec.nvm_id.load(Ordering::Relaxed);
         let column_offset = self.schema.get_column_offset(column_id);
@@ -102,6 +104,8 @@ impl Table {
         // let old_data = tuple.get_data(TUPLE_HEADER as u64 + 8);
         #[cfg(all(not(feature = "delta"), not(feature = "buffer_pool")))]
         let old_data = tuple.get_data(self.tuple_size);
+        #[cfg(all(feature = "buffer_pool", feature = "delta"))]
+        drop(tuple);
         #[cfg(feature = "buffer_pool")]
         let tuple = Tuple::reload(tuple_address);
         self.update_tuple(
@@ -146,6 +150,19 @@ impl Table {
     ) -> Result<TimeStamp> {
         #[cfg(not(feature = "buffer_pool"))]
         let tuple = self.get_tuple(tuple_id);
+        #[cfg(feature = "buffer_pool")]
+        let tuple = self
+            .get_tuple_buffer(
+                tuple_id,
+                thread_id,
+                ts.tid,
+                cur_min_txn,
+                #[cfg(feature = "clock")]
+                timer,
+            )
+            .0
+            .data
+            .read();
 
         #[cfg(feature = "clock")]
         timer.start(READING);
@@ -165,20 +182,7 @@ impl Table {
             // file::sfence();
             // assert_eq!(delta.len(), 140);
         }
-        #[cfg(feature = "buffer_pool")]
-        let tuple = self
-            .get_tuple_buffer(
-                tuple_id,
-                thread_id,
-                ts.tid,
-                cur_min_txn,
-                #[cfg(feature = "clock")]
-                timer,
-            )
-            .0
-            .data
-            .read();
-
+       
         let lock_tid = tuple.lock_tid().clone();
 
         #[cfg(feature = "cc_cfg_occ")]
@@ -550,6 +554,8 @@ impl Table {
                 timer,
             )
             .0;
+        #[cfg(all(feature = "buffer_pool", feature = "delta"))]
+        let tuple = vec.data.read();
         #[cfg(feature = "buffer_pool")]
         let tuple_address = vec.nvm_id.load(Ordering::Relaxed);
         #[cfg(feature = "delta")]
@@ -557,8 +563,11 @@ impl Table {
         #[cfg(all(not(feature = "delta"), not(feature = "buffer_pool")))]
         let old_data = tuple.get_data(self.tuple_size);
         let new_data: u64 = 1;
+        #[cfg(all(feature = "buffer_pool", feature = "delta"))]
+        drop(tuple);
         #[cfg(feature = "buffer_pool")]
         let tuple = Tuple::reload(tuple_address);
+    
         self.update_tuple(
             &tuple,
             tuple_id,

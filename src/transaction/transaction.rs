@@ -271,7 +271,7 @@ impl<'a> Transaction<'a> {
                 #[cfg(all(feature = "mvcc", feature = "ilog"))]
                 let d_delta_address = self.txn_buffer.alloc_dram();
                 let column_id = ws.column_id;
-                #[cfg(not(feature = "append"))]
+                #[cfg(all(not(feature = "append"), not(feature = "buffer_pool")))]
                 self.txn_buffer.add_delta(ws.do_update(
                     delta_address,
                     #[cfg(all(feature = "mvcc", feature = "ilog"))]
@@ -285,6 +285,19 @@ impl<'a> Transaction<'a> {
                     k,
                 ));
                 #[cfg(feature = "append")]
+                ws.do_update(
+                    delta_address,
+                    #[cfg(all(feature = "mvcc", feature = "ilog"))]
+                    d_delta_address,
+                    column_id,
+                    self.thread_id,
+                    self.cur_min_txn,
+                    #[cfg(feature = "clock")]
+                    &mut self.timer,
+                    #[cfg(feature = "clock")]
+                    k,
+                );
+                #[cfg(all(feature = "delta", feature = "buffer_pool"))] // TODO fix
                 ws.do_update(
                     delta_address,
                     #[cfg(all(feature = "mvcc", feature = "ilog"))]
