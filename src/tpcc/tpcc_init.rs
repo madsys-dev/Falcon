@@ -1,7 +1,6 @@
 use crate::config::POOL_PERC;
 use crate::storage::catalog::Catalog;
 use crate::storage::schema::{ColumnType, TableSchema};
-
 use std::path::Path;
 
 pub fn init_schema(file_name: impl AsRef<Path>) {
@@ -89,6 +88,7 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
     catalog.set_range_primary_key("NEW-ORDER", 0);
     #[cfg(feature = "buffer_pool")]
     {
+        use crate::tpcc::*;
         catalog.set_pool_size("WAREHOUSE", 400000 as usize); // 2048
         catalog.set_pool_size("DISTRICT", 4000000 as usize); // 20480
         catalog.set_pool_size(

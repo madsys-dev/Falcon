@@ -170,8 +170,6 @@ pub struct Table {
     primary_key: AtomicUsize,
     #[cfg(not(feature = "lock_index"))]
     index: HashMap<usize, TableIndex>,
-    #[cfg(feature = "rust_map")]
-    guard: Guard,
     #[cfg(feature = "lock_index")]
     index: HashMap<usize, RwLock<TableIndex>>,
     // index_key: RwLock<Vec<usize>>,
@@ -227,8 +225,6 @@ impl Table {
             schema,
             primary_key: AtomicUsize::new(0),
             index: HashMap::new(),
-            #[cfg(feature = "rust_map")]
-            guard: crossbeam_epoch::pin(),
             #[cfg(feature = "local_allocator")]
             allocator: std::iter::from_fn(|| {
                 Some(RwLock::new(TupleAllocator::new(address, max_tuple as u32)))
@@ -274,8 +270,6 @@ impl Table {
             schema,
             primary_key: AtomicUsize::new(0),
             index: HashMap::new(),
-            #[cfg(feature = "rust_map")]
-            guard: crossbeam_epoch::pin(),
             // index_key: RwLock::new(Vec::new()),
             #[cfg(feature = "local_allocator")]
             allocator: std::iter::from_fn(|| {

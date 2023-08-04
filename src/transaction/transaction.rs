@@ -377,6 +377,8 @@ impl<'a> Transaction<'a> {
         let tuple = Tuple::reload(tuple_address);
         tuple.set_ts(self.ts);
         tuple.set_next(0);
+        #[cfg(feature = "cc_cfg_2pl")]
+        tuple.set_write_lock(self.ts.tid, 0);
         tuple.set_lock_tid(self.ts.tid);
         tuple
     }
@@ -815,7 +817,7 @@ mod tests {
         let table_name = "table1";
         catalog.add_table(table_name, schema).unwrap();
 
-        catalog.set_primary_key(table_name, 1);
+        catalog.set_range_primary_key(table_name, 1);
         let table = &catalog.get_table(table_name);
 
         // txn1 add t1, t2
@@ -980,6 +982,7 @@ mod tests {
         let tuple2_id = transaction1.insert(table, "6,3");
         println!("insert t2 666 233");
         let tuple3_id = transaction1.insert(table, "3,2");
+        let t3_id = tuple3_id.clone();
         println!("insert t3 233 666");
         let tuple4_id = transaction1.insert(table, "5,4");
         println!("insert t4 666 233");
@@ -988,11 +991,19 @@ mod tests {
         println!("tuple3 insert address: {}", tuple3_id.get_address());
         println!("tuple4 insert address: {}", tuple4_id.get_address());
         transaction1.commit();
-
+        
         let r = table.range_tuple_id(&IndexType::Int64(1), &IndexType::Int64(6)).unwrap();
         let ret = vec![tuple1_id, tuple3_id, tuple4_id];
         println!("{:?}", r);
         assert_eq!(r, ret);
+
+        let mut transaction2 = Transaction::new(&mut buffer, false);
+        transaction2.begin();
+        println!("txn2 begin");
+        transaction2.delete(table, &t3_id).unwrap();
+        transaction2.commit();
+        let r = table.range_tuple_id(&IndexType::Int64(1), &IndexType::Int64(6)).unwrap();
+        println!("{:?}", r);
 
     }
 }

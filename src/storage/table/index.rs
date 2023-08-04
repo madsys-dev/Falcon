@@ -66,7 +66,7 @@ impl Table {
                     }
                 },
                 #[cfg(feature = "rust_map")]
-                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u, &self.guard) {
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u, &crossbeam_epoch::pin()) {
                     Some(v) => {
                         result = Ok(v.clone());
                     }
@@ -177,9 +177,13 @@ impl Table {
                         Some(v) => {
                             let result = v.cas(tuple._address(), new_address);
                             if result != tuple._address() {
-                                return Err(Error::Tuple(TupleError::TupleChanged {
-                                    conflict_tid: result,
-                                }));
+                                // println!("old {}, new {}", result, tuple._address());
+                                if *column_id == self.primary_key.load(Ordering::Relaxed) {
+                                    return Err(Error::Tuple(TupleError::TupleChanged {
+                                        conflict_tid: result,
+                                    }));
+                                }
+                                
                             }
                         }
                         None => {
@@ -201,12 +205,18 @@ impl Table {
                 }
                 #[cfg(feature = "rust_map")]
                 TableIndex::Int64R(index) => {
-                    match index.upsert(
-                        u64::from_le_bytes(key.try_into().unwrap()),
-                        TupleId::from_address(new_address),
-                        &self.guard
+                    match index.get(
+                        &u64::from_le_bytes(key.try_into().unwrap()),
+                        &crossbeam_epoch::pin()
                     ) {
-                        Some(v) => {}
+                        Some(v) => {
+                            let result = v.cas(tuple._address(), new_address);
+                            if result != tuple._address() {
+                                return Err(Error::Tuple(TupleError::TupleChanged {
+                                    conflict_tid: result,
+                                }));
+                            }
+                        }
                         None => {
                             return Err(Error::Tuple(TupleError::KeyNotMatched));
                         }
@@ -312,7 +322,7 @@ impl Table {
                 }
                 #[cfg(feature = "rust_map")]
                 TableIndex::Int64R(index) => {
-                    match index.get(&u64::from_le_bytes(key.try_into().unwrap()), &self.guard) {
+                    match index.get(&u64::from_le_bytes(key.try_into().unwrap()), &crossbeam_epoch::pin()) {
                         Some(v) => {
                             if v.get_address() == pool_address {
                                 v.update(new_address);
@@ -377,7 +387,7 @@ impl Table {
                 #[cfg(feature = "rust_map")]
                 (TableIndex::Int64R(index), IndexType::Int64(u)) => {
                     // println!("{}, {:?}", u, value);
-                    index.insert(u, value.clone(), &self.guard);
+                    index.insert(u, value.clone(), &crossbeam_epoch::pin());
                 }
                 (TableIndex::None, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
                 _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
@@ -442,7 +452,7 @@ impl Table {
                     TableIndex::Int64R(index) => {
                         index.insert(
                             u64::from_le_bytes(key.try_into().unwrap()),
-                            tuple_id.clone(), &self.guard
+                            tuple_id.clone(), &crossbeam_epoch::pin()
                             
                         );
                     }
@@ -499,8 +509,9 @@ impl Table {
                     TableIndex::Int64R(index) => {
                         index.delete(
                             &u64::from_le_bytes(key.try_into().unwrap()),
-                            &self.guard,
+                            &crossbeam_epoch::pin(),
                         );
+
                     }
                     _ => {
                         return Err(Error::Tuple(TupleError::IndexNotBuilt));
@@ -547,7 +558,8 @@ impl Table {
         match (table_index, key_lower, key_upper) {
             #[cfg(feature = "rust_map")]
             (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
-                let r:Vec<_> = index.range(u..v, &self.guard).collect();
+                let guard = crossbeam_epoch::pin();
+                let r:Vec<_> = index.range(u..v, &guard).collect();
                 for (_, tuple_id) in r {
                     collect.push(tuple_id.clone());
                 }
@@ -584,7 +596,8 @@ impl Table {
         match (table_index, key_lower, key_upper) {
             #[cfg(feature = "rust_map")]
             (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
-                let (_, tid) = index.range(u..v, &self.guard).next_back().unwrap();
+                let guard = crossbeam_epoch::pin();
+                let (_, tid) = index.range(u..v, &guard).next_back().unwrap();
                 result = Ok(TupleId::from_address(tid.get_address()));
             },
             #[cfg(any(feature = "nbtree"))]

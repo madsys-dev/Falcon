@@ -211,11 +211,13 @@ impl<'a> WriteSetStruct<'a> {
                 #[cfg(not(feature = "cc_cfg_2pl"))]
                 assert_eq!(tuple.lock_tid(), self.ts.tid);
                 tuple.set_ts_tid(self.ts.tid);
+                self.table.remove_tuple(&self.tuple_id, thread_id).unwrap();
                 // T
                 // file::sfence();
                 // debug!("cn {} {}", tuple._address(), self.ts.tid);
                 // tuple.set_lock_tid(0);
             }
+            
             #[cfg(feature = "buffer_pool")]
             {
                 self.tuple_id = TupleId::from_address(ret);

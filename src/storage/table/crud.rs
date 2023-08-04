@@ -240,75 +240,7 @@ impl Table {
         }
         // tuple.set_ts(ts);
     }
-    #[cfg(feature = "buffer_direct")]
-    pub fn update_tuple_buffer(
-        &self,
-        tuple_id: &TupleId,
-        snapshot: &SnapShotEntity,
-        column_id: usize,
-        new_data: &[u8],
-        ts: TimeStamp,
-        thread_id: usize,
-        cur_min_txn: u64,
-        #[cfg(feature = "clock")] timer: &mut Timer,
-    ) -> Result<usize> {
-        let start = self.schema.get_column_offset(column_id).start as u64;
-
-        let (old_vec, pointer) = self.get_tuple_buffer(
-            tuple_id,
-            thread_id,
-            ts.tid,
-            cur_min_txn,
-            #[cfg(feature = "clock")]
-            timer,
-        );
-
-        let tuple = old_vec.data.read();
-
-        let lock_tid = tuple.lock_tid().clone();
-
-        #[cfg(feature = "cc_cfg_occ")]
-        if !snapshot.access(TimeStamp { tid: lock_tid }, ts.tid, cur_min_txn) {
-            return Err(TupleError::TupleChanged {
-                conflict_tid: lock_tid,
-            }
-            .into());
-        }
-        #[cfg(feature = "cc_cfg_to")]
-        {
-            if lock_tid != 0 && lock_tid != ts.tid {
-                // println!("lock {} {}", lock_tid, ts.tid);
-                return Err(TupleError::TupleChanged {
-                    conflict_tid: lock_tid,
-                }
-                .into());
-            }
-            let tuple_ts = tuple.ts();
-
-            if tuple_ts.read_ts > ts.tid || tuple_ts.tid > ts.tid {
-                // println!("read_ts {} {}", tuple_ts.read_ts, ts.tid);
-                return Err(TupleError::TupleChanged {
-                    conflict_tid: tuple_ts.read_ts,
-                }
-                .into());
-            }
-        }
-
-        let (new_vec, new_pointer) = self.buffer_replace(thread_id, cur_min_txn);
-
-        let mut data = new_vec.data.write();
-
-        data.copy_from_buffer(ts, &old_vec);
-        data.update_data_by_column(start, new_data);
-        data.set_ts_tid(ts);
-        data.set_next(pointer as u64);
-        data.set_lock_tid(0);
-
-        new_vec.clock.store(ts.tid, Ordering::Relaxed);
-        new_vec.nvm_id.store(tuple_id.page_start, Ordering::Relaxed);
-        Ok(new_pointer)
-    }
-
+    
     pub fn update_tuple(
         &self,
         tuple: &Tuple,
@@ -561,8 +493,11 @@ impl Table {
             file::sfence();
             #[cfg(feature = "clock")]
             timer.start(BUFFER);
+            // if self.id == 6 {
+            //     println!("{:?}, old: {}, new: {}", new_tuple_id, tuple._address(), tuple_address);
+            // }
             self.update_tuple_id_on_index(tuple_address, &tuple)
-                .unwrap();
+                .unwrap_or(());
 
             #[cfg(feature = "clock")]
             timer.end(BUFFER, BUFFER);
@@ -607,14 +542,20 @@ impl Table {
         let tuple = vec.data.read();
         #[cfg(feature = "buffer_pool")]
         let tuple_address = vec.nvm_id.load(Ordering::Relaxed);
-        let old_data = tuple.delete_flag();
-        let new_data: u64 = 0;
+        #[cfg(feature = "delta")]
+        let old_data = tuple.delete_flag().to_le_bytes();
+        #[cfg(all(not(feature = "delta"), not(feature = "buffer_pool")))]
+        let old_data = tuple.get_data(self.tuple_size);
+        let new_data: u64 = 1;
         #[cfg(feature = "buffer_pool")]
         let tuple = Tuple::reload(tuple_address);
         self.update_tuple(
             &tuple,
             tuple_id,
-            &old_data.to_le_bytes(),
+            #[cfg(not(feature = "buffer_pool"))]
+            &old_data,
+            #[cfg(feature = "buffer_pool")]
+            &new_data.to_le_bytes(),
             new_address,
             #[cfg(all(feature = "mvcc", feature = "ilog"))]
             d_delta_address,
@@ -633,4 +574,74 @@ impl Table {
             flush,
         )
     }
+
+    #[cfg(feature = "buffer_direct")]
+    pub fn update_tuple_buffer(
+        &self,
+        tuple_id: &TupleId,
+        snapshot: &SnapShotEntity,
+        column_id: usize,
+        new_data: &[u8],
+        ts: TimeStamp,
+        thread_id: usize,
+        cur_min_txn: u64,
+        #[cfg(feature = "clock")] timer: &mut Timer,
+    ) -> Result<usize> {
+        let start = self.schema.get_column_offset(column_id).start as u64;
+
+        let (old_vec, pointer) = self.get_tuple_buffer(
+            tuple_id,
+            thread_id,
+            ts.tid,
+            cur_min_txn,
+            #[cfg(feature = "clock")]
+            timer,
+        );
+
+        let tuple = old_vec.data.read();
+
+        let lock_tid = tuple.lock_tid().clone();
+
+        #[cfg(feature = "cc_cfg_occ")]
+        if !snapshot.access(TimeStamp { tid: lock_tid }, ts.tid, cur_min_txn) {
+            return Err(TupleError::TupleChanged {
+                conflict_tid: lock_tid,
+            }
+            .into());
+        }
+        #[cfg(feature = "cc_cfg_to")]
+        {
+            if lock_tid != 0 && lock_tid != ts.tid {
+                // println!("lock {} {}", lock_tid, ts.tid);
+                return Err(TupleError::TupleChanged {
+                    conflict_tid: lock_tid,
+                }
+                .into());
+            }
+            let tuple_ts = tuple.ts();
+
+            if tuple_ts.read_ts > ts.tid || tuple_ts.tid > ts.tid {
+                // println!("read_ts {} {}", tuple_ts.read_ts, ts.tid);
+                return Err(TupleError::TupleChanged {
+                    conflict_tid: tuple_ts.read_ts,
+                }
+                .into());
+            }
+        }
+
+        let (new_vec, new_pointer) = self.buffer_replace(thread_id, cur_min_txn);
+
+        let mut data = new_vec.data.write();
+
+        data.copy_from_buffer(ts, &old_vec);
+        data.update_data_by_column(start, new_data);
+        data.set_ts_tid(ts);
+        data.set_next(pointer as u64);
+        data.set_lock_tid(0);
+
+        new_vec.clock.store(ts.tid, Ordering::Relaxed);
+        new_vec.nvm_id.store(tuple_id.page_start, Ordering::Relaxed);
+        Ok(new_pointer)
+    }
+
 }

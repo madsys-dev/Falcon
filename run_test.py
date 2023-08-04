@@ -308,16 +308,16 @@ def test_tpcc_nvm():
         ],  
         "mvcc": [
             [""],
-            ["mvcc"]
+            # ["mvcc"]
         ],
         "buffer": [
             sysname["Falcon"], sysname["Falcon(No Flush)"],
             sysname["Falcon(All Flush)"], sysname["Inp"],
-            sysname["Outp"], sysname["Inp(Hot Tuple Cache)"]
+            sysname["Inp(Hot Tuple Cache)"], sysname["Outp"]
         ],
         "clock": [
             ["txn_clock", "new_order_clock"],
-            ["txn_clock", "payment_clock"],
+            # ["txn_clock", "payment_clock"],
         ],
         "thread_count": [[48]]
     }

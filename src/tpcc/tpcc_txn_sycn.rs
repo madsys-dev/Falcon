@@ -142,11 +142,13 @@ pub fn run_new_order<'a>(
         let ol_iid = item.iid;
         let ol_wid = item.wid;
         let ol_quantity = item.quantity;
-        let item: TupleVec;
+        let item;
         // println!("11111 {}", ol_iid);
 
+        let schema = &items.schema;
+        let column = schema.search_by_name("I_PRICE").unwrap();
         match items.search_tuple_id(&IndexType::Int64(ol_iid)) {
-            Ok(tid) => match txn.read(items, &tid) {
+            Ok(tid) => match txn.read_column(items, &tid, column) {
                 Ok(row) => {
                     // println!("22222 {}, {}", ol_iid, tid.get_address());
                     item = row;
@@ -163,10 +165,8 @@ pub fn run_new_order<'a>(
         }
         // println!("++++++++++++++++++++");
 
-        let schema = &items.schema;
-        let id = schema.search_by_name("I_PRICE").unwrap();
         // println!("get item {}", id);
-        let i_price = f64::from_le_bytes(item.get_column_by_id(schema, id).try_into().unwrap());
+        let i_price = f64::from_le_bytes(item.data.as_slice().try_into().unwrap());
         let stock: TupleVec;
         let s_tid: TupleId;
         match stocks.search_tuple_id(&IndexType::Int64(stock_key(ol_wid, ol_iid))) {
@@ -724,9 +724,9 @@ pub fn run_deliver<'a>(
                 .unwrap(),
         );
 
-
         let column = schema.search_by_name("O_CARRIER_ID").unwrap();
-
+        // TODO
+        // println!("{:?}", o_tid);
         match txn.update(orders, &o_tid, column, &deliver.o_carrier_id.to_le_bytes()) {
             Ok(_) => {}
             _ => {
@@ -797,35 +797,74 @@ pub fn run_deliver<'a>(
                 return false;
             }
         }
-        let c_balance = f64::from_le_bytes(
-            customer
-                .get_column_by_id(schema, column)
-                .try_into()
-                .unwrap(),
-        );
-        match txn.update(customers, &c_tid, column, &(c_balance + ol_total).to_le_bytes()) {
-            Ok(_) => {
+        #[cfg(not(feature = "append"))]
+        {
+            let c_balance = f64::from_le_bytes(
+                customer
+                    .get_column_by_id(schema, column)
+                    .try_into()
+                    .unwrap(),
+            );
+            match txn.update(customers, &c_tid, column, &(c_balance + ol_total).to_le_bytes()) {
+                Ok(_) => {
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
             }
-            _ => {
-                txn.abort();
-                return false;
+            let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
+            let c_delevery = u64::from_le_bytes(
+                customer
+                    .get_column_by_id(schema, column)
+                    .try_into()
+                    .unwrap(),
+            );
+            match txn.update(customers, &c_tid, column, &(c_delevery + 1).to_le_bytes()) {
+                Ok(_) => {
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
             }
         }
-        let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
-        let c_delevery = u64::from_le_bytes(
-            customer
-                .get_column_by_id(schema, column)
-                .try_into()
-                .unwrap(),
-        );
-        match txn.update(customers, &c_tid, column, &(c_delevery + 1).to_le_bytes()) {
-            Ok(_) => {
-            }
-            _ => {
-                txn.abort();
-                return false;
+        
+        #[cfg(feature = "append")]
+        {
+            let mut bytes = Vec::<u8>::new();
+            let c_balance = f64::from_le_bytes(
+                customer
+                    .get_column_by_id(schema, column)
+                    .try_into()
+                    .unwrap(),
+            );
+            bytes.extend_from_slice(&(c_balance + ol_total).to_le_bytes());
+            
+            let column: usize = schema.search_by_name("C_YTD_PAYMENT").unwrap();
+            bytes.extend_from_slice(customer
+                .get_column_by_id(schema, column));
+            let column: usize = schema.search_by_name("C_PAYMENT_CNT").unwrap();
+            bytes.extend_from_slice(customer
+                .get_column_by_id(schema, column));
+            let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
+            let c_delevery = u64::from_le_bytes(
+                customer
+                    .get_column_by_id(schema, column)
+                    .try_into()
+                    .unwrap(),
+            );
+            bytes.extend_from_slice(&(c_delevery + 1).to_le_bytes());
+            match txn.update(customers, &c_tid, column, bytes.as_slice()) {
+                Ok(_) => {
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
             }
         }
+        
         // 5. 删除neworder
         match txn.delete(new_orders, &no_tid) {
             Ok(_) => {
