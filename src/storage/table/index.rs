@@ -537,6 +537,49 @@ impl Table {
 
         Ok(())
     }
+    
+    pub fn index_remove_by_tuple_buffer(&self, tuple: &RwLockReadGuard<BufferDataVec>,) -> Result {
+        // let index = self.index.read().unwrap();
+        // let index_key = self.index_key.read().unwrap();
+        for (column_id, table_index) in self.index.iter() {
+            let range = self.schema.get_column_offset(*column_id);
+            // println!("{} {}\n", range.start, range.end);
+            // let pair = self.index.get(key).unwrap();
+            let key = tuple.get_data_by_column(range);
+            #[cfg(not(feature = "lock_index"))]
+            {
+                match table_index {
+                    TableIndex::Int64(index) => {
+                        index.remove(&u64::from_le_bytes(key.try_into().unwrap()));
+                    }
+                    #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                    TableIndex::String(index) => {
+                        index.remove(&String::from(str::from_utf8(key).unwrap()));
+                    }
+                    #[cfg(feature = "dash")]
+                    TableIndex::String(index) => {
+                        let key = String::from(str::from_utf8(key).unwrap());
+                        let key = key.trim_end_matches(char::from(0));
+                        index.remove(key.clone(), key.len());
+                    }
+                    #[cfg(feature = "rust_map")]
+                    TableIndex::Int64R(index) => {
+                        index.delete(
+                            &u64::from_le_bytes(key.try_into().unwrap()),
+                            &crossbeam_epoch::pin(),
+                        );
+
+                    }
+                    _ => {
+                        return Err(Error::Tuple(TupleError::IndexNotBuilt));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+    
     pub fn search_tuple_id(&self, key: &IndexType) -> Result<TupleId> {
         let k = self.primary_key.load(std::sync::atomic::Ordering::SeqCst); //read().unwrap();
         self.search_tuple_id_on_index(key, k)

@@ -147,6 +147,7 @@ pub fn run_new_order<'a>(
 
         let schema = &items.schema;
         let column = schema.search_by_name("I_PRICE").unwrap();
+
         match items.search_tuple_id(&IndexType::Int64(ol_iid)) {
             Ok(tid) => match txn.read_column(items, &tid, column) {
                 Ok(row) => {

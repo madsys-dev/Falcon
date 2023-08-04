@@ -469,12 +469,15 @@ impl<'a> Transaction<'a> {
             // if latest {
             //     println!("{}, {}, {}, {:x}, {:x}", self.ts.tid, tuple_id.get_address(), tuple_ts, tuple_nvm.next_address(), tuple.next);
             // }
-            if !tuple.next(&table) {
-                #[cfg(feature = "clock")]
-                self.timer.end(READING, READING);
-                return Err(TupleError::TupleNotExists.into());
+            #[cfg(feature = "mvcc")]
+            {
+                if !tuple.next(&table) {
+                    #[cfg(feature = "clock")]
+                    self.timer.end(READING, READING);
+                    return Err(TupleError::TupleNotExists.into());
+                }
+                latest = false;
             }
-            latest = false;
         }
         // TODO tuple_id for different table
         #[cfg(not(feature = "update_direct"))]
@@ -752,18 +755,21 @@ impl<'a> Transaction<'a> {
             // if latest {
             //     println!("{}, {}, {}, {:x}, {:x}", self.ts.tid, tuple_id.get_address(), tuple_ts, tuple_nvm.next_address(), tuple.next);
             // }
-            if !tuple.next(&table) {
-                #[cfg(feature = "clock")]
-                self.timer.end(READING, READING);
-                // println!("1111");
-                return Err(TupleError::TupleNotExists.into());
+            #[cfg(feature = "mvcc")]
+            {
+                if !tuple.next(&table) {
+                    #[cfg(feature = "clock")]
+                    self.timer.end(READING, READING);
+                    // println!("1111");
+                    return Err(TupleError::TupleNotExists.into());
+                }
+                latest = false;
             }
-            latest = false;
         }
         #[cfg(not(feature = "update_direct"))]
         {
             for ws in &self.write_set {
-                if ws.tuple_id.eq(&tuple_id) {
+                if ws.tuple_id.eq(&tuple_id) && ws.table.id == table.id{
                     let offset = table.schema.get_column_offset(ws.column_id).start;
                     // let column_type = table.schema.get_column_type((tid >> 50) as usize);
                     // println!("{}", offset);

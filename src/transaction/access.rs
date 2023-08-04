@@ -238,7 +238,7 @@ impl<'a> WriteSetStruct<'a> {
                 // assert_eq!(tuple.lock_tid(), self.ts.tid);
                 tuple.set_ts_tid(self.ts.tid);
                 // println!("{:?}", tuple.get_data(self.table.tuple_size));
-
+                self.table.remove_tuple_buffer(&self.tuple_id, thread_id, &tuple).unwrap();
                 // file::sfence();
                 // tuple.set_lock_tid(0);
                 return vec.nvm_id.load(Ordering::Relaxed);

@@ -32,19 +32,32 @@ impl Table {
         let mut allocator = self.allocator.get(tid).unwrap().write();
         allocator.allocate_append_tuple(self.tuple_size, tid)
     }
-    pub fn remove_tuple(&self, tuple_id: &TupleId, tid: usize) -> Result {
+    pub fn remove_tuple(&self, tuple_id: &TupleId, thread_id: usize) -> Result {
         #[cfg(feature = "center_allocator")]
         self.allocator.free_tuple(tuple_id);
         #[cfg(feature = "local_allocator")]
         self.allocator
-            .get(tid)
+            .get(thread_id)
             .unwrap()
             .read()
             .free_tuple(tuple_id.get_address());
-        self.index_remove_by_tuple(tuple_id, &self.get_tuple(tuple_id))
+        return self.index_remove_by_tuple(tuple_id, &self.get_tuple(tuple_id));
         // return Ok(());
     }
 
+    #[cfg(feature = "buffer_pool")]
+    pub fn remove_tuple_buffer(&self, tuple_id: &TupleId, thread_id: usize, tuple: &RwLockReadGuard<BufferDataVec>,) -> Result {
+        #[cfg(feature = "center_allocator")]
+        self.allocator.free_tuple(tuple_id);
+        #[cfg(feature = "local_allocator")]
+        self.allocator
+            .get(thread_id)
+            .unwrap()
+            .read()
+            .free_tuple(tuple_id.get_address());
+        return self.index_remove_by_tuple_buffer(tuple);
+        // return Ok(());
+    }
     /// S1: get_old_value
     /// S2: check_metadata TODO
     /// S3: gen_delta
@@ -402,7 +415,6 @@ impl Table {
         {
             let start_p = self.pool_size / TRANSACTION_COUNT * thread_id;
             let end_p = self.pool_size / TRANSACTION_COUNT * (thread_id + 1);
-
             #[cfg(not(feature = "mvcc"))]
             if start_p <= pointer && pointer < end_p {
                 let mut data = old_vec.data.write();
@@ -538,8 +550,6 @@ impl Table {
                 timer,
             )
             .0;
-        #[cfg(feature = "buffer_pool")]
-        let tuple = vec.data.read();
         #[cfg(feature = "buffer_pool")]
         let tuple_address = vec.nvm_id.load(Ordering::Relaxed);
         #[cfg(feature = "delta")]
