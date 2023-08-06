@@ -1,14 +1,19 @@
 #[cfg(feature = "dash")]
 use crate::c::ffi::init;
+#[cfg(feature = "nbtree")]
+use crate::c::ffi::init_btree_file;
 use crate::config::*;
-use crate::customer_config::{NVM_FILE_PATH, INDEX_FILE_PATH};
+use crate::customer_config::NVM_FILE_PATH;
+#[cfg(feature = "dash")]
+use crate::customer_config::INDEX_FILE_PATH;
+#[cfg(feature = "nbtree")]
+use crate::customer_config::BTREE_FILE_PATH;
 use crate::utils::file;
 use crate::utils::persist::persist_bitmap::PersistBitmap;
 use crate::{Error, Result};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::path::Path;
-use std::ptr;
 
 const ROOT_PAGE_SIZE: u64 = PAGE_SIZE;
 const CATELOG_PAGE_SIZE: u64 = PAGE_SIZE;
@@ -76,7 +81,11 @@ impl NVMTableStorage {
             let path = std::ffi::CString::new(INDEX_FILE_PATH).expect("CString::new failed");
             init(path.as_ptr());
         }
-
+        #[cfg(feature = "nbtree")]
+        unsafe {
+            let path = std::ffi::CString::new(BTREE_FILE_PATH).expect("CString::new failed");
+            init_btree_file(path.as_ptr());
+        }
         if STORAGE.get().is_none() {
             #[cfg(feature = "native")]
             let file_name = "_test_persist";
@@ -97,7 +106,11 @@ impl NVMTableStorage {
             let path = std::ffi::CString::new(INDEX_FILE_PATH).expect("CString::new failed");
             init(path.as_ptr());
         }
-
+        #[cfg(feature = "nbtree")]
+        unsafe {
+            let path = std::ffi::CString::new(BTREE_FILE_PATH).expect("CString::new failed");
+            init_btree_file(path.as_ptr());
+        }
         if STORAGE.get().is_none() {
             #[cfg(feature = "native")]
             let file_name = "_test_persist";

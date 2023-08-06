@@ -576,6 +576,7 @@ pub fn run_order_status<'a>(
             Ok(tid) => match txn.read(customers, &tid) {
                 Ok(row) => {
                     customer = row;
+                    cid = customer_key(wid, did, cid);
                 }
                 _ => {
                     txn.abort();
@@ -592,16 +593,21 @@ pub fn run_order_status<'a>(
     // 2.获取客户最后的一次订单
     let schema = &orders.schema;
     let mut oid = 0;
-    match orders.search_tuple_id_on_index(&IndexType::Int64(customer_key(wid, did, cid)), schema.search_by_name("O_C_ID").unwrap()) {
-        Ok(tid) => match txn.read(orders, &tid) {
-            Ok(row) => {
-                oid = u64::from_le_bytes(
-                    row.get_column_by_id(schema, schema.search_by_name("O_ID").unwrap()).try_into().unwrap());
-                // 此处可根据row打印对应的order内容
-            }
-            _ => {
-                txn.abort();
-                return false;
+    println!("1111");
+    match orders.search_tuple_id_on_index(&IndexType::Int64(cid), schema.search_by_name("O_C_ID").unwrap()) {
+        
+        Ok(tid) => {
+            println!("{}, {:?}", cid, tid);
+            match txn.read(orders, &tid) {
+                Ok(row) => {
+                    oid = u64::from_le_bytes(
+                        row.get_column_by_id(schema, schema.search_by_name("O_ID").unwrap()).try_into().unwrap());
+                    // 此处可根据row打印对应的order内容
+                }
+                _ => {
+                    txn.abort();
+                    return false;
+                }
             }
         },
         _ => {
@@ -609,6 +615,7 @@ pub fn run_order_status<'a>(
             return false;
         }
     }
+    println!("2222");
 
     // 3. 获取orderline信息
     let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);

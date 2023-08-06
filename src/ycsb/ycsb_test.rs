@@ -58,7 +58,7 @@ mod test {
                 let mut buffer = TransactionBuffer::new(catalog, i as u64);
                 let mut ycsb_txn = YcsbTxn::new(prop, &mut buffer);
                 #[cfg(feature = "nbtree")]
-                table.init_index(i as i32);
+                crate::storage::index::nbtree::init_index(i as i32);
                 b.wait();
                 for key in 0..prop.table_size {
                     if (key as usize) % THREAD_COUNT == i {

@@ -1,18 +1,22 @@
 use libc::c_char;
 use libc::c_int;
-use libc::c_uint;
 use libc::c_void;
 
-// #[link(name = "btree")]
-// extern {
-//     pub fn btree_create() -> *mut c_void;
-//     pub fn btree_insert(btree: *mut c_void, key: u64, value: u64) -> c_int;
-//     pub fn btree_find(btree: *mut c_void, key: u64) -> u64;
-//     pub fn btree_remove(btree: *mut c_void, key: u64) -> u64;
-//     pub fn btree_init_for_thread(thread_id: c_int);
+#[cfg(feature = "nbtree")]
+#[link(name = "btree")]
+extern "C" {
+    pub fn init_btree_file(file: *const c_char);
+    pub fn btree_create() -> *mut c_void;
+    pub fn btree_insert(btree: *mut c_void, key: u64, value: u64) -> c_int;
+    pub fn btree_find(btree: *mut c_void, key: u64) -> u64;
+    pub fn btree_remove(btree: *mut c_void, key: u64) -> u64;
+    pub fn btree_init_for_thread(thread_id: c_int);
+    pub fn btree_scan(btree: *mut c_void, start: u64, end: u64) -> u64;
+    pub fn btree_next(btree: *mut c_void, start: u64, end: u64) -> u64;
+    pub fn btree_last(btree: *mut c_void, start: u64, end: u64) -> u64;
 
-// }
-
+}
+#[cfg(feature = "dash")]
 #[link(name = "dash")]
 extern "C" {
     pub fn plus(a: c_int, b: c_int) -> c_int;

@@ -24,11 +24,14 @@ impl<T> Dash<T> {
         }
     }
     pub fn insert(&self, key: u64, value: TupleId) -> Option<u64> {
+        assert!(value.get_address() > 1000);
         unsafe { dash_insert(self.root, key, value.get_address()) };
         Some(0)
     }
     pub fn update(&self, key: u64, value: TupleId) -> Option<u64> {
         // println!("{:x}", value.get_address());
+        assert!(value.get_address() > 1000);
+
         unsafe { dash_update(self.root, key, value.get_address()) };
         Some(0)
     }
@@ -38,6 +41,8 @@ impl<T> Dash<T> {
     }
     pub fn get(&self, key: &u64) -> Option<TupleId> {
         let v = unsafe { dash_find(self.root, *key) };
+        assert!(v > 1000);
+
         Some(TupleId {
             page_start: AtomicU64::new(v),
         })

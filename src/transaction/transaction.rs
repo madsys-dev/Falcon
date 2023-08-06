@@ -836,7 +836,7 @@ mod tests {
         let table_name = "table1";
         catalog.add_table(table_name, schema).unwrap();
 
-        catalog.set_range_primary_key(table_name, 1);
+        catalog.set_primary_key(table_name, 1);
         let table = &catalog.get_table(table_name);
 
         // txn1 add t1, t2

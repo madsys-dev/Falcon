@@ -390,6 +390,8 @@ pub fn init_tables() {
         thread::spawn(move || {
             let mut buffer = TransactionBuffer::new(catalog, i as u64);
 
+            #[cfg(feature = "nbtree")]
+            crate::storage::index::nbtree::init_index(i as i32);
             for wid in 0..WAREHOUSES {
                 if (wid as usize) % THREAD_COUNT == i {
                     println!("{}", wid);

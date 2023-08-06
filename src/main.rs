@@ -1,21 +1,23 @@
-// use n2db::storage::nvm_file::NVMTableStorage;
-// use n2db::storage::table::TupleId;
+use n2db::storage::nvm_file::NVMTableStorage;
+use n2db::storage::table::TupleId;
 // use n2db::tpcc::u64_rand;
 // use n2db::utils::{file, io};
 // use std::ptr;
-// use std::sync::atomic::AtomicU64;
-// use std::sync::{mpsc, Arc, Barrier};
-// use std::time::{Duration, SystemTime};
-// use std::{thread, time};
-// use n2db::storage::index::nbtree::NBTree;
+use std::sync::atomic::AtomicU64;
+use std::sync::{mpsc, Arc, Barrier};
+use std::time::{Duration, SystemTime};
+use std::{thread, time};
+#[cfg(feature = "nbtree")]
+use n2db::storage::index::nbtree::NBTree;
 // use n2db::storage::index::dash::Dash;
 // use n2db::storage::index::dashstring::DashString;
 // use chrono::prelude::*;
 
 // use n2db::c::ffi::{init, plus};
-use bztree::BzTree;
 
-fn main() {
+pub fn test_bztree() {
+    use bztree::BzTree;
+
     let tree = BzTree::<u64, u64>::default();
     let guard = crossbeam_epoch::pin();
 
@@ -48,6 +50,71 @@ fn main() {
     println!("{:?}", tree.first(&guard));
     tree.pop_first(&guard);
     println!("{:?}", tree.first(&guard));
+    
+}
+#[cfg(feature = "nbtree")]
+fn test_nbtree()
+{
+    NVMTableStorage::init_test_database();
+    let tree = NBTree::<u64>::new();
+    let index = Arc::new(tree);
+    let barrier = Arc::new(Barrier::new(1));
+    // let mut handles = Vec::with_capacity(10);
+
+    // let t1 = index.clone();
+    // let b1 = barrier.clone();
+    // handles.push(thread::spawn(move || {
+    //     crate::storage::index::nbtree::init_index(0);    
+    //     b1.wait();
+    //     for i in 0..100 {
+    //         t1.insert(i, TupleId{page_start: AtomicU64::new(i)});
+    //     }
+    //     b1.wait();
+    //     println!("{:?}", t1.range(&18, &23));
+
+    //     println!("{}", t1.get(&15).unwrap().get_address());
+    //     println!("finish1");
+
+
+    // }));
+    // let t2 = index.clone();
+    // let b2 = barrier.clone();
+    // handles.push(thread::spawn(move || {
+    //     crate::storage::index::nbtree::init_index(2);
+    //     b2.wait();
+    //     for i in 100..200 {
+    //         t2.insert(i, TupleId{page_start: AtomicU64::new(i)});
+
+    //     }
+    //     println!("{:?}", t2.range(&104, &109));
+
+    //     b2.wait();
+
+    //     println!("{}", t2.get(&115).unwrap().get_address());
+    //     println!("finish2");
+
+
+    // }));
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
+    // println!("finish");
+    let t = index.clone();
+    n2db::storage::index::nbtree::init_index(1);
+    println!("{}", t.get(&10115).unwrap().get_address());
+
+    for i in 200..300 {
+        t.insert(i, TupleId{page_start: AtomicU64::new(i)});
+    }
+    // println!("insert");
+    println!("{:?}", t.range(&195, &205));
+    println!("{:?}", t.last(&195, &205));
+    println!("{:?}", t.last(&288, &305));
+    println!("{:?}", t.last(&300, &305));
+
+    // println!("{}", t.get(&101).unwrap().get_address());
+}
+fn main() {
     
     // ------------datetime------
     // let dt = Local::now();
@@ -94,48 +161,7 @@ fn main() {
 
     // let b = dash2.get(&1).unwrap();
     // println!("{}", b.get_address());
-    // let mut handles = Vec::with_capacity(10);
-
     // ----------NBTREE
-    // let tree = NBTree::<u64>::new();
-    // let index = Arc::new(tree);
-    // let barrier = Arc::new(Barrier::new(1));
 
-    // let t1 = index.clone();
-    // let b1 = barrier.clone();
-    // handles.push(thread::spawn(move || {
-    //     t1.init(0);
-    //     b1.wait();
-    //     for i in 0..100 {
-    //         t1.insert(i, TupleId{page_start: AtomicU64::new(i)});
-    //     }
-    //     b1.wait();
-    //     println!("{}", t1.get(&11015).unwrap().get_address());
-
-    // }));
-    // let t2 = index.clone();
-    // let b2 = barrier.clone();
-    // handles.push(thread::spawn(move || {
-    //     t2.init(2);
-    //     b2.wait();
-    //     for i in 100..200 {
-    //         t2.insert(i, TupleId{page_start: AtomicU64::new(i)});
-
-    //     }
-    //     b2.wait();
-
-    //     println!("{}", t2.get(&1015).unwrap().get_address());
-
-    // }));
-    // for handle in handles {
-    //     handle.join().unwrap();
-    // }
-    // let t = index.clone();
-    // t.init(2);
-    // println!("{}", t.get(&10115).unwrap().get_address());
-
-    // for i in 0..10000 {
-    //     tree.insert(i, TupleId{page_start: AtomicU64::new(i)});
-    // }
-    // println!("{}", tree.get(&1015).unwrap().get_address());
+    
 }

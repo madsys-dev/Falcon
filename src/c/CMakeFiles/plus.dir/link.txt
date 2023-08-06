@@ -1,2 +1,0 @@
-/usr/local/Cellar/llvm/11.0.0/bin/llvm-ar qc libplus.a CMakeFiles/plus.dir/plus.cpp.o
-/usr/local/Cellar/llvm/11.0.0/bin/llvm-ranlib libplus.a

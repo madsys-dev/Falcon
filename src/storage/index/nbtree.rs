@@ -1,11 +1,11 @@
 
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicU64;
 
-use libc::c_void;
+use libc::{c_void, c_int};
+
 use crate::c::ffi::*;
-use crate::Result;
+use crate::customer_config::BTREE_FILE_PATH;
 use crate::storage::table::TupleId;
 
 #[derive(Debug, Clone)]
@@ -36,7 +36,34 @@ impl<T> NBTree<T> {
         let v = unsafe{btree_find(self.root, *key)};
         Some(TupleId{page_start: AtomicU64::new(v & MASK)})
     }
-    pub fn init(&self, thread_id: i32) {
-        unsafe{btree_init_for_thread(thread_id)};
+
+    pub fn range(&self, start: &u64, end: &u64) -> Vec<TupleId> {
+        let mut result = Vec::new();
+        unsafe {
+            let mut item = btree_scan(self.root, *start, *end);
+            while item > 0 {
+                // println!("receive {:x}", item);
+
+                result.push(TupleId{page_start: AtomicU64::new(item & MASK)});
+                item = btree_next(self.root, *start, *end);
+            }
+        }
+        
+        return result;
     }
+    pub fn last(&self, start: &u64, end: &u64) -> Option<TupleId> {
+        unsafe {
+            let item = btree_last(self.root, *start, *end);
+            if item == 0 {
+                return None;
+            }
+            return Some(TupleId{page_start: AtomicU64::new(item & MASK)});
+        }
+    }
+}
+
+#[cfg(feature = "nbtree")]
+pub fn init_index(thread_id: i32) {
+    println!("-----init index {}----", thread_id);
+    unsafe{btree_init_for_thread(thread_id as c_int)};
 }

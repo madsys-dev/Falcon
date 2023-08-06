@@ -56,7 +56,7 @@ impl Table {
                         }
                     }
                 }
-                #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                #[cfg(not(feature = "dash"))]
                 (TableIndex::String(index), IndexType::String(u)) => match index.get(u) {
                     Some(v) => {
                         result = Ok(v.clone());
@@ -74,10 +74,15 @@ impl Table {
                         return Err(Error::Tuple(TupleError::KeyNotMatched));
                     }
                 },
-                #[cfg(any(feature = "nbtree"))]
-                (TableIndex::String(index), IndexType::String(u)) => {
-                    return Err(Error::Tuple(TupleError::IndexNotBuilt))
-                }
+                #[cfg(feature = "nbtree")]
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => match index.get(u) {
+                    Some(v) => {
+                        result = Ok(v.clone());
+                    }
+                    None => {
+                        return Err(Error::Tuple(TupleError::KeyNotMatched));
+                    }
+                },
                 (TableIndex::None, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
                 _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
             };
@@ -222,7 +227,25 @@ impl Table {
                         }
                     }
                 }
-                #[cfg(not(any(feature = "dash", feature = "nbtree")))]
+                #[cfg(feature = "nbtree")]
+                TableIndex::Int64R(index) => {
+                    match index.get(
+                        &u64::from_le_bytes(key.try_into().unwrap()),
+                    ) {
+                        Some(v) => {
+                            let result = v.cas(tuple._address(), new_address);
+                            if result != tuple._address() {
+                                return Err(Error::Tuple(TupleError::TupleChanged {
+                                    conflict_tid: result,
+                                }));
+                            }
+                        }
+                        None => {
+                            return Err(Error::Tuple(TupleError::KeyNotMatched));
+                        }
+                    }
+                }
+                #[cfg(not(feature = "dash"))]
                 TableIndex::String(index) => {
                     match index.get(&String::from(str::from_utf8(key).unwrap())) {
                         Some(v) => {
@@ -247,17 +270,17 @@ impl Table {
                         }
                     }
                 }
-                #[cfg(feature = "nbtree")]
-                TableIndex::String(index) => {
-                    match index.get(&String::from(str::from_utf8(key).unwrap())) {
-                        Some(v) => {
-                            v.update(new_address);
-                        }
-                        None => {
-                            return Err(Error::Tuple(TupleError::KeyNotMatched));
-                        }
-                    }
-                }
+                // #[cfg(feature = "nbtree")]
+                // TableIndex::String(index) => {
+                //     match index.get(&String::from(str::from_utf8(key).unwrap())) {
+                //         Some(v) => {
+                //             v.update(new_address);
+                //         }
+                //         None => {
+                //             return Err(Error::Tuple(TupleError::KeyNotMatched));
+                //         }
+                //     }
+                // }
                 
                 _ => {}
             }
@@ -336,7 +359,23 @@ impl Table {
                         }
                     }
                 }
-                #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                #[cfg(feature = "nbtree")]
+                TableIndex::Int64R(index) => {
+                    match index.get(&u64::from_le_bytes(key.try_into().unwrap())) {
+                        Some(v) => {
+                            if v.get_address() == pool_address {
+                                v.update(new_address);
+                            }
+                            // else {
+                            //     println!("{}, {}", v.get_address(), pool_address)
+                            // }
+                        }
+                        None => {
+                            return Err(Error::Tuple(TupleError::KeyNotMatched));
+                        }
+                    }
+                }
+                #[cfg(not(feature = "dash"))]
                 TableIndex::String(index) => {
                     match index.get(&String::from(str::from_utf8(key).unwrap())) {
                         Some(v) => {
@@ -371,7 +410,7 @@ impl Table {
                 (TableIndex::Int64(index), IndexType::Int64(u)) => {
                     index.insert(u, value.clone());
                 }
-                #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                #[cfg(not(feature = "dash"))]
                 (TableIndex::String(index), IndexType::String(u)) => {
                     index.insert(u, value.clone()).unwrap();
                 }
@@ -380,14 +419,15 @@ impl Table {
                     let u = u.trim_end_matches(char::from(0));
                     index.insert(u.clone(), u.len(), value.clone()).unwrap();
                 }
-                #[cfg(any(feature = "nbtree"))]
-                (TableIndex::String(index), IndexType::String(u)) => {
-                    return Err(Error::Tuple(TupleError::IndexNotBuilt))
-                }
                 #[cfg(feature = "rust_map")]
                 (TableIndex::Int64R(index), IndexType::Int64(u)) => {
                     // println!("{}, {:?}", u, value);
                     index.insert(u, value.clone(), &crossbeam_epoch::pin());
+                }
+                #[cfg(feature = "nbtree")]
+                (TableIndex::Int64R(index), IndexType::Int64(u)) => {
+                    // println!("{}, {:?}", u, value);
+                    index.insert(u, value.clone());
                 }
                 (TableIndex::None, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
                 _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
@@ -420,10 +460,8 @@ impl Table {
 
         for (column_id, table_index) in self.index.iter() {
             let range = self.schema.get_column_offset(*column_id);
-            // println!("{} {}\n", range.start, range.end);
             // let pair = self.index.get(key).unwrap();
             let key = tuple.get_data_by_column(range);
-
             #[cfg(not(feature = "lock_index"))]
             {
                 // let table_index = self.index.get(column_id).unwrap();
@@ -444,7 +482,7 @@ impl Table {
 
                         index.insert(key.clone(), key.len(), tuple_id.clone());
                     }
-                    #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                    #[cfg(not(feature = "dash"))]
                     TableIndex::String(index) => {
                         index.insert(String::from(str::from_utf8(key).unwrap()), tuple_id.clone());
                     }
@@ -454,6 +492,13 @@ impl Table {
                             u64::from_le_bytes(key.try_into().unwrap()),
                             tuple_id.clone(), &crossbeam_epoch::pin()
                             
+                        );
+                    }
+                    #[cfg(feature = "nbtree")]
+                    TableIndex::Int64R(index) => {
+                        index.insert(
+                            u64::from_le_bytes(key.try_into().unwrap()),
+                            tuple_id.clone()
                         );
                     }
                     _ => {
@@ -495,7 +540,7 @@ impl Table {
                     TableIndex::Int64(index) => {
                         index.remove(&u64::from_le_bytes(key.try_into().unwrap()));
                     }
-                    #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                    #[cfg(not(feature = "dash"))]
                     TableIndex::String(index) => {
                         index.remove(&String::from(str::from_utf8(key).unwrap()));
                     }
@@ -510,6 +555,13 @@ impl Table {
                         index.delete(
                             &u64::from_le_bytes(key.try_into().unwrap()),
                             &crossbeam_epoch::pin(),
+                        );
+
+                    }
+                    #[cfg(feature = "nbtree")]
+                    TableIndex::Int64R(index) => {
+                        index.remove(
+                            &u64::from_le_bytes(key.try_into().unwrap()),
                         );
 
                     }
@@ -552,7 +604,7 @@ impl Table {
                     TableIndex::Int64(index) => {
                         index.remove(&u64::from_le_bytes(key.try_into().unwrap()));
                     }
-                    #[cfg(not(any(feature = "nbtree", feature = "dash")))]
+                    #[cfg(not(feature = "dash"))]
                     TableIndex::String(index) => {
                         index.remove(&String::from(str::from_utf8(key).unwrap()));
                     }
@@ -568,7 +620,12 @@ impl Table {
                             &u64::from_le_bytes(key.try_into().unwrap()),
                             &crossbeam_epoch::pin(),
                         );
-
+                    }
+                    #[cfg(feature = "nbtree")]
+                    TableIndex::Int64R(index) => {
+                        index.remove(
+                            &u64::from_le_bytes(key.try_into().unwrap()),
+                        );
                     }
                     _ => {
                         return Err(Error::Tuple(TupleError::IndexNotBuilt));
@@ -593,7 +650,7 @@ impl Table {
     pub fn range_tuple_id_on_index(&self, key_lower: &IndexType, key_upper: &IndexType, columns: usize) -> Result<Vec<TupleId>> {
         // let index = self.index.read().unwrap();
         // println!("key:{:?}, columns:{:?}, index:{:?}",key,columns,self.index);
-        let mut collect = Vec::new();
+        let mut collect = Vec::<TupleId>::new();
         let result: Result<Vec<TupleId>>;
 
         
@@ -609,10 +666,11 @@ impl Table {
                 result = Ok(collect);
                 
             },
-            #[cfg(any(feature = "nbtree"))]
-            (TableIndex::String(index), IndexType::String(u)) => {
-                return Err(Error::Tuple(TupleError::IndexNotBuilt))
-            }
+            #[cfg(feature = "nbtree")]
+            (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
+                result = Ok(index.range(u, v));
+                
+            },
             (TableIndex::None, _, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
             _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
         };
@@ -643,10 +701,18 @@ impl Table {
                 let (_, tid) = index.range(u..v, &guard).next_back().unwrap();
                 result = Ok(TupleId::from_address(tid.get_address()));
             },
-            #[cfg(any(feature = "nbtree"))]
-            (TableIndex::String(index), IndexType::String(u)) => {
-                return Err(Error::Tuple(TupleError::IndexNotBuilt))
-            }
+            #[cfg(feature = "nbtree")]
+            (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
+                match index.last(u, v) {
+                    Some(tid) => {
+                        result = Ok(TupleId::from_address(tid.get_address()));
+                    }
+                    None => {
+                        return Err(Error::Tuple(TupleError::KeyNotMatched));
+                    }
+                }
+
+            },
             (TableIndex::None, _, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
             _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
         };

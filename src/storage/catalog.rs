@@ -307,6 +307,7 @@ impl Catalog {
             new_table.add_index(*key).unwrap();
         }
         new_table.set_range_primary_key(key).unwrap();
+        new_table.set_primary_key(table.get_primary_key()).unwrap();
 
         let mut table_index = self.table_index.write().unwrap();
         table_index.insert(String::from(table_name), Arc::new(new_table));

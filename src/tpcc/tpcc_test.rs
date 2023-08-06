@@ -67,9 +67,11 @@ mod tests {
 
                 #[cfg(feature = "txn_clock")]
                 let mut timer = Timer::new();
-
+                
                 let tablelist = TableList::new(&catalog);
 
+                #[cfg(feature = "nbtree")]
+                crate::storage::index::nbtree::init_index((i+THREAD_COUNT) as i32);
                 let mut num = 0;
                 let mut total = 0;
                 println!("test start {} ", i);
@@ -78,7 +80,7 @@ mod tests {
 
                 loop {
                     total = total + 1;
-                    let pr = u64_rand(&mut rng, 1, 100);
+                    let pr = u64_rand(&mut rng, 1, 96);
                     if pr <= 43 {
                         let query = TpccQuery::gen_payment(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]

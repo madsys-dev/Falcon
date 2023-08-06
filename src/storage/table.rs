@@ -14,7 +14,8 @@ use super::global::Timer;
 use super::index::dash::Dash;
 #[cfg(feature = "dash")]
 use super::index::dashstring::DashString;
-// use super::index::nbtree::NBTree;
+#[cfg(feature = "nbtree")]
+use super::index::nbtree::NBTree;
 use super::row::BufferDataVec;
 use super::row::COMMIT_MASK;
 use crate::storage::allocator::{DualPageAllocator, LocalPageAllocator, Page};
@@ -41,13 +42,13 @@ type Index<T> = BplusTree<T, TupleId>;
 type Index<T> = HashMap<T, TupleId>;
 #[cfg(feature = "rust_dash")]
 type Index<T> = DashMap<T, TupleId>;
-#[cfg(feature = "nbtree")]
-type Index<u64> = NBTree<u64>;
 #[cfg(feature = "dash")]
 type Index<u64> = Dash<u64>;
 
 #[cfg(feature = "rust_map")]
 type RangeIndex<T> = BzTree<T, TupleId>;
+#[cfg(feature = "nbtree")]
+type RangeIndex<u64> = NBTree<u64>;
 
 #[cfg(feature = "local_allocator")]
 type TupleAllocator = LocalPageAllocator;
@@ -426,7 +427,10 @@ impl Table {
             ColumnType::Int64 => {
                 #[cfg(feature = "rust_map")]
                 index.insert(key, TableIndex::Int64R(RangeIndex::<u64>::default()));
+                #[cfg(feature = "nbtree")]
+                index.insert(key, TableIndex::Int64R(RangeIndex::<u64>::new()));
             }
+            
             ColumnType::String { len: _ } => {
                 #[cfg(feature = "rust_map")]
                 index.insert(key, TableIndex::StringR(RangeIndex::<String>::default()));
@@ -445,17 +449,7 @@ impl Table {
     pub fn get_index_key(&self) -> std::collections::hash_map::Keys<usize, RwLock<TableIndex>> {
         self.index.keys()
     }
-    #[cfg(feature = "nbtree")]
-    pub fn init_index(&self, thread_id: i32) {
-        for (_, index) in &self.index {
-            match index {
-                TableIndex::Int64(index) => {
-                    index.init(thread_id);
-                }
-                _ => {}
-            };
-        }
-    }
+    
     pub fn pre_alloc(&self, count: u64) {
         for tid in 0..TRANSACTION_COUNT {
             let mut allocator = self.allocator.get(tid).unwrap().write();
