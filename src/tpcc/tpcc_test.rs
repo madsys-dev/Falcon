@@ -80,7 +80,7 @@ mod tests {
 
                 loop {
                     total = total + 1;
-                    let pr = u64_rand(&mut rng, 1, 96);
+                    let pr = u64_rand(&mut rng, 1, 100);
                     if pr <= 43 {
                         let query = TpccQuery::gen_payment(&mut rng, i as u64);
                         #[cfg(feature = "txn_clock")]
