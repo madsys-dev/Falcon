@@ -593,11 +593,11 @@ pub fn run_order_status<'a>(
     // 2.获取客户最后的一次订单
     let schema = &orders.schema;
     let mut oid = 0;
-    println!("1111");
+    // println!("1111");
     match orders.search_tuple_id_on_index(&IndexType::Int64(cid), schema.search_by_name("O_C_ID").unwrap()) {
         
         Ok(tid) => {
-            println!("{}, {:?}", cid, tid);
+            // 
             match txn.read(orders, &tid) {
                 Ok(row) => {
                     oid = u64::from_le_bytes(
@@ -611,11 +611,13 @@ pub fn run_order_status<'a>(
             }
         },
         _ => {
+            // 没找到订单
+            // println!("{}, {:?}", cid, order_status);
             txn.abort();
-            return false;
+            return true;
         }
     }
-    println!("2222");
+    // println!("2222");
 
     // 3. 获取orderline信息
     let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);

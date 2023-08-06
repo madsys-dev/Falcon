@@ -3,6 +3,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
 
 use crate::c::ffi::*;
+use crate::config::NVM_ADDR;
 use crate::storage::table::TupleId;
 use crate::Result;
 use libc::c_void;
@@ -41,8 +42,9 @@ impl<T> Dash<T> {
     }
     pub fn get(&self, key: &u64) -> Option<TupleId> {
         let v = unsafe { dash_find(self.root, *key) };
-        assert!(v > 1000);
-
+        if v < NVM_ADDR {
+            return None;
+        }
         Some(TupleId {
             page_start: AtomicU64::new(v),
         })
