@@ -296,7 +296,6 @@ pub fn init_table_order(buffer: &mut TransactionBuffer, wid: u64, did: u64) {
                 append_u64(&mut s, did);
                 append_u64(&mut s, wid);
                 append_u64(&mut s, order_line_key(wid, did, oid, olid));
-                //println!("Insert order line {},{},{},{}", wid, did, oid, olid);
                 append_u64(&mut s, u64_rand(rng, 1, ITEMS) - 1);
                 // OL_SUPPLY_W_ID
                 append_u64(&mut s, wid);

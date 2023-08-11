@@ -133,7 +133,10 @@ pub fn run_new_order<'a>(
         tuple.save_u64(0, order_key(wid, did, oid));
         tuple.save_u64(8, did);
         tuple.save_u64(16, wid);
+        // println!("insert w {}, d {}, {}", wid, did, order_key(wid, did, oid));
         new_orders.index_insert(IndexType::Int64(order_key(wid, did, oid)), &TupleId::from_address(tuple._address())).unwrap();
+        // println!("insert end");
+
 
     }
 
@@ -220,6 +223,7 @@ pub fn run_new_order<'a>(
             tuple.save_f64(64, _ol_amount);
             tuple.save_u64(72, 0);
         }
+        // println!("insert wid {}, {}", wid, order_line_key(wid, did, oid, olid));
         order_lines.index_insert(IndexType::Int64(order_line_key(wid, did, oid, olid)), &TupleId::from_address(tuple._address())).unwrap();
     }
     // println!("add {} ol from {} to {}", next_oid, order_line_key(wid, did, oid, 0), order_line_key(wid, did, oid, ol_cnt));
@@ -243,6 +247,7 @@ pub fn run_payment<'a>(
     let h_amount = payment.h_amount;
     let warehouse: TupleVec;
     let w_tid: TupleId;
+
     match warehouses.search_tuple_id(&IndexType::Int64(wid)) {
         Ok(tid) => match txn.read(warehouses, &tid) {
             Ok(row) => {
@@ -267,6 +272,7 @@ pub fn run_payment<'a>(
             .try_into()
             .unwrap(),
     );
+
     let next_w_ytd = w_ytd + h_amount;
     match txn.update(warehouses, &w_tid, column, &next_w_ytd.to_le_bytes()) {
         Ok(_) => {}
@@ -309,6 +315,8 @@ pub fn run_payment<'a>(
             return false;
         }
     }
+    // println!("2222");
+
     let c_wid = payment.c_wid;
     let c_did = payment.c_did;
     let by_last = payment.by_last;
@@ -328,6 +336,7 @@ pub fn run_payment<'a>(
                     customer = row;
                 }
                 _ => {
+                    // println!("123");
                     txn.abort();
                     return false;
                 }
@@ -362,6 +371,7 @@ pub fn run_payment<'a>(
             }
         }
     }
+
     let column = schema.search_by_name("C_BALANCE").unwrap();
     let c_balance = f64::from_le_bytes(
         customer
@@ -439,12 +449,14 @@ pub fn run_stock_level<'a>(
             .try_into()
             .unwrap(),
     );
+
     // 2.获取街区内20个订单库存不足的去重货物种类数量
     let max_orderline_key = order_line_key(wid, did, d_next_o_id-1, MAX_LINES_PER_ORDER);
     let min_orderline_key = order_line_key(wid, did, d_next_o_id-20, 0);
-    // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
 
     let lines:Vec<TupleId>;
+    // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
+
     match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
         Ok(l) => {
             lines = l;
@@ -454,6 +466,7 @@ pub fn run_stock_level<'a>(
             return false;
         }
     }
+
     let mut itemid2quantity = std::collections::HashMap::<u64, u64>::new();
     let schema = &order_lines.schema;
     for olid in lines {
@@ -592,7 +605,7 @@ pub fn run_order_status<'a>(
 
     // 2.获取客户最后的一次订单
     let schema = &orders.schema;
-    let mut oid = 0;
+    let mut oid: u64 = 0;
     // println!("1111");
     match orders.search_tuple_id_on_index(&IndexType::Int64(cid), schema.search_by_name("O_C_ID").unwrap()) {
         
@@ -617,9 +630,10 @@ pub fn run_order_status<'a>(
             return true;
         }
     }
-    // println!("2222");
 
     // 3. 获取orderline信息
+    let oid = oid % ORDERS_PER_DISTRICT;
+
     let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
     let min_orderline_key = order_line_key(wid, did, oid, 0);
     // println!("read {} old from {} to {}", d_next_o_id, min_orderline_key, max_orderline_key);
@@ -632,9 +646,12 @@ pub fn run_order_status<'a>(
         },
         _ => {
             txn.abort();
+            // println!("3333 wid {}, did {}, oid {}, min_orderline_key {}", wid, did, oid, min_orderline_key);
+            // 
             return false;
         }
     }
+    // println!("111");
     let schema = &order_lines.schema;
     for olid in lines {
         match txn.read(order_lines, &olid) {
@@ -676,218 +693,229 @@ pub fn run_deliver<'a>(
 
 
     for did in 0..DISTRICTS_PER_WAREHOUSE { 
+        loop 
+        {
+            txn.begin();
+            txn.read_only = false;
+            let oid:u64;
+            let no_tid: TupleId;
+            // 1.查找最早的未交付订单
+            let max_order_key = order_key(wid, did, ORDERS_PER_DISTRICT);
+            let min_order_key = order_key(wid, did, 0);
+            // println!("de w {} d {} {} {}", wid, did, min_order_key, max_order_key);
+            match new_orders.last_range_tuple_id(&IndexType::Int64(min_order_key), &IndexType::Int64(max_order_key)) {
+                Ok(tid) => {
+                    no_tid = tid;
+                    match txn.read(new_orders, &no_tid) {
+                        Ok(row) => {
+                            let schema = &new_orders.schema;
+                            oid = u64::from_le_bytes(row.get_column_by_id(schema, schema.search_by_name("NO_O_ID").unwrap()).try_into().unwrap());
+                        }
+                        _ => {
+                            txn.abort();
+                            continue;
+                        }
+                    }
+                },
+                _ => {
+                    break;
+                }
+            }
+    
+            // 2.更新订单表, 获知用户id
+            let order: TupleVec;
+            let o_tid: TupleId;
+            let schema = &orders.schema;
 
-        txn.begin();
-        txn.read_only = false;
-        let oid:u64;
-        let no_tid: TupleId;
-        // 1.查找最早的未交付订单
-        let max_order_key = order_key(wid, did, ORDERS_PER_DISTRICT);
-        let min_order_key = order_key(wid, did, 0);
-
-        match new_orders.last_range_tuple_id(&IndexType::Int64(min_order_key), &IndexType::Int64(max_order_key)) {
-            Ok(tid) => {
-                no_tid = tid;
-                match txn.read(new_orders, &no_tid) {
+            match orders.search_tuple_id(&IndexType::Int64(oid)) {
+                Ok(tid) => match txn.read(orders, &tid) {
                     Ok(row) => {
-                        let schema = &new_orders.schema;
-                        oid = u64::from_le_bytes(row.get_column_by_id(schema, schema.search_by_name("NO_O_ID").unwrap()).try_into().unwrap());
+                        o_tid = tid;
+                        order = row;
                     }
                     _ => {
                         txn.abort();
-                        return false;
+                        continue;
+                    }
+                },
+                _ => {
+                    txn.abort();
+                    continue;
+                }
+            }
+    
+            let column = schema.search_by_name("O_C_ID").unwrap();
+            let cid = u64::from_le_bytes(
+                order
+                    .get_column_by_id(schema, column)
+                    .try_into()
+                    .unwrap(),
+            );
+
+            let column = schema.search_by_name("O_CARRIER_ID").unwrap();
+            // TODO
+            // println!("{:?}", o_tid);
+            match txn.update(orders, &o_tid, column, &deliver.o_carrier_id.to_le_bytes()) {
+                Ok(_) => {}
+                _ => {
+                    txn.abort();
+                    continue;
+                }
+            }
+            // 3. 更新orderline数据表
+            let oid = oid % ORDERS_PER_DISTRICT;
+            let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
+            let min_orderline_key = order_line_key(wid, did, oid, 0);
+    
+            let lines:Vec<TupleId>;
+
+            match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
+                Ok(l) => {
+                    lines = l;
+                },
+                _ => {
+                    txn.abort();
+                    continue;
+                }
+            }
+
+            let schema = &order_lines.schema;
+            let column: usize = schema.search_by_name("OL_DELIVERY_D").unwrap();
+            let mut ol_total:f64 = 0.0;
+            for olid in lines {
+                match txn.read(order_lines, &olid) {
+                    Ok(row) => {
+                        let ol_amount = f64::from_le_bytes(
+                            row.get_column_by_id(schema, schema.search_by_name("OL_AMOUNT").unwrap())
+                            .try_into().unwrap());
+                        ol_total += ol_amount;
+                    }
+                    _ => {
+                        continue;
                     }
                 }
-            },
-            _ => {
-                continue;
+                match txn.update(order_lines, &olid, column, &deliver.ol_delivery_d.to_le_bytes()) {
+                    Ok(_) => {
+                    }
+                    _ => {
+                        txn.abort();
+                        continue;
+                    }
+                }
             }
-        }
 
-        // 2.更新订单表, 获知用户id
-        let order: TupleVec;
-        let o_tid: TupleId;
-        let schema = &orders.schema;
+            //4. 更新客户表数据
+            let schema = &customers.schema;
+            let column: usize = schema.search_by_name("C_BALANCE").unwrap();
+            let c_tid: TupleId;
+            let customer: TupleVec;
+            match customers.search_tuple_id(&IndexType::Int64(cid)) {
+                Ok(tid) => match txn.read(customers, &tid) {
+                    Ok(row) => {
+                        c_tid = tid;
+                        customer = row;
+                    }
+                    _ => {
+                        txn.abort();
+                        continue;
+                    }
+                },
+                _ => {
+                    txn.abort();
+                    continue;
+                }
+            }
+            // println!("2222");
 
-        match orders.search_tuple_id(&IndexType::Int64(oid)) {
-            Ok(tid) => match txn.read(orders, &tid) {
-                Ok(row) => {
-                    o_tid = tid;
-                    order = row;
+            #[cfg(not(feature = "append"))]
+            {
+                let c_balance = f64::from_le_bytes(
+                    customer
+                        .get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                match txn.update(customers, &c_tid, column, &(c_balance + ol_total).to_le_bytes()) {
+                    Ok(_) => {
+                    }
+                    _ => {
+                        txn.abort();
+                        continue;
+                    }
                 }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
-            },
-            _ => {
-                txn.abort();
-                return false;
-            }
-        }
-
-        let column = schema.search_by_name("O_C_ID").unwrap();
-        let cid = u64::from_le_bytes(
-            order
-                .get_column_by_id(schema, column)
-                .try_into()
-                .unwrap(),
-        );
-
-        let column = schema.search_by_name("O_CARRIER_ID").unwrap();
-        // TODO
-        // println!("{:?}", o_tid);
-        match txn.update(orders, &o_tid, column, &deliver.o_carrier_id.to_le_bytes()) {
-            Ok(_) => {}
-            _ => {
-                txn.abort();
-                return false;
-            }
-        }
-        // 3. 更新orderline数据表
-        let oid = oid % ORDERS_PER_DISTRICT;
-        let max_orderline_key = order_line_key(wid, did, oid, MAX_LINES_PER_ORDER);
-        let min_orderline_key = order_line_key(wid, did, oid, 0);
-        // println!("read {} old from {} to {}", oid, min_orderline_key, max_orderline_key);
-
-        let lines:Vec<TupleId>;
-        match order_lines.range_tuple_id(&IndexType::Int64(min_orderline_key), &IndexType::Int64(max_orderline_key)) {
-            Ok(l) => {
-                lines = l;
-                // println!("{:?}", lines);
-            },
-            _ => {
-                txn.abort();
-                return false;
-            }
-        }
-        let schema = &order_lines.schema;
-        let column: usize = schema.search_by_name("OL_DELIVERY_D").unwrap();
-        let mut ol_total:f64 = 0.0;
-        for olid in lines {
-            match txn.read(order_lines, &olid) {
-                Ok(row) => {
-                    let ol_amount = f64::from_le_bytes(
-                        row.get_column_by_id(schema, schema.search_by_name("OL_AMOUNT").unwrap())
-                        .try_into().unwrap());
-                    ol_total += ol_amount;
-                }
-                _ => {
-                    txn.abort();
-                    return false;
+                let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
+                let c_delevery = u64::from_le_bytes(
+                    customer
+                        .get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                match txn.update(customers, &c_tid, column, &(c_delevery + 1).to_le_bytes()) {
+                    Ok(_) => {
+                    }
+                    _ => {
+                        txn.abort();
+                        continue
+                    }
                 }
             }
-            match txn.update(order_lines, &olid, column, &deliver.ol_delivery_d.to_le_bytes()) {
-                Ok(_) => {
-                }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
-            }
-        }
-        //4. 更新客户表数据
-        let schema = &customers.schema;
-        let column: usize = schema.search_by_name("C_BALANCE").unwrap();
-        let c_tid: TupleId;
-        let customer: TupleVec;
-        match customers.search_tuple_id(&IndexType::Int64(cid)) {
-            Ok(tid) => match txn.read(customers, &tid) {
-                Ok(row) => {
-                    c_tid = tid;
-                    customer = row;
-                }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
-            },
-            _ => {
-                txn.abort();
-                return false;
-            }
-        }
-        #[cfg(not(feature = "append"))]
-        {
-            let c_balance = f64::from_le_bytes(
-                customer
-                    .get_column_by_id(schema, column)
-                    .try_into()
-                    .unwrap(),
-            );
-            match txn.update(customers, &c_tid, column, &(c_balance + ol_total).to_le_bytes()) {
-                Ok(_) => {
-                }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
-            }
-            let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
-            let c_delevery = u64::from_le_bytes(
-                customer
-                    .get_column_by_id(schema, column)
-                    .try_into()
-                    .unwrap(),
-            );
-            match txn.update(customers, &c_tid, column, &(c_delevery + 1).to_le_bytes()) {
-                Ok(_) => {
-                }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
-            }
-        }
-        
-        #[cfg(feature = "append")]
-        {
-            let mut bytes = Vec::<u8>::new();
-            let c_balance = f64::from_le_bytes(
-                customer
-                    .get_column_by_id(schema, column)
-                    .try_into()
-                    .unwrap(),
-            );
-            bytes.extend_from_slice(&(c_balance + ol_total).to_le_bytes());
             
-            let column: usize = schema.search_by_name("C_YTD_PAYMENT").unwrap();
-            bytes.extend_from_slice(customer
-                .get_column_by_id(schema, column));
-            let column: usize = schema.search_by_name("C_PAYMENT_CNT").unwrap();
-            bytes.extend_from_slice(customer
-                .get_column_by_id(schema, column));
-            let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
-            let c_delevery = u64::from_le_bytes(
-                customer
-                    .get_column_by_id(schema, column)
-                    .try_into()
-                    .unwrap(),
-            );
-            bytes.extend_from_slice(&(c_delevery + 1).to_le_bytes());
-            match txn.update(customers, &c_tid, column, bytes.as_slice()) {
-                Ok(_) => {
+            #[cfg(feature = "append")]
+            {
+                let mut bytes = Vec::<u8>::new();
+                let c_balance = f64::from_le_bytes(
+                    customer
+                        .get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                bytes.extend_from_slice(&(c_balance + ol_total).to_le_bytes());
+                
+                let column: usize = schema.search_by_name("C_YTD_PAYMENT").unwrap();
+                bytes.extend_from_slice(customer
+                    .get_column_by_id(schema, column));
+                let column: usize = schema.search_by_name("C_PAYMENT_CNT").unwrap();
+                bytes.extend_from_slice(customer
+                    .get_column_by_id(schema, column));
+                let column: usize = schema.search_by_name("C_DELIVERY_CNT").unwrap();
+                let c_delevery = u64::from_le_bytes(
+                    customer
+                        .get_column_by_id(schema, column)
+                        .try_into()
+                        .unwrap(),
+                );
+                bytes.extend_from_slice(&(c_delevery + 1).to_le_bytes());
+                match txn.update(customers, &c_tid, column, bytes.as_slice()) {
+                    Ok(_) => {
+                    }
+                    _ => {
+                        txn.abort();
+                        continue;
+                    }
                 }
-                _ => {
-                    txn.abort();
-                    return false;
-                }
             }
-        }
-        
-        // 5. 删除neworder
-        match txn.delete(new_orders, &no_tid) {
-            Ok(_) => {
+            
+            // 5. 删除neworder
+            // #[cfg(not(feature = "buffer_pool"))]
+            // match txn.delete(new_orders, &no_tid) {
+            //     Ok(_) => {
+            //     }
+            //     _ => {
+            //         txn.abort();
+            //         continue;
+            //     }
+            // }
+            // println!("deilver {} {} end", wid, did);
+
+            if txn.commit() {
+
+                break;
+
             }
-            _ => {
-                txn.abort();
-                return false;
-            }
+            // println!("deilver {} {} failed", wid, did);
+
         }
-        // println!("deilver {} success", did);
-        if !txn.commit() {
-            return false;
-        }
+       
     }
     
     // println!("deilver fail");

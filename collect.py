@@ -71,6 +71,7 @@ for w in ["new_order", "payment"]:
         sysname = result[0]
         commits = int(result[4])
         workload = result[3]
+        print(result)
         if workload != "OCC":
             continue
         if w not in result[1]:

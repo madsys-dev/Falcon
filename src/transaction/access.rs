@@ -282,8 +282,8 @@ impl<'a> WriteSetStruct<'a> {
         #[cfg(not(feature = "cc_cfg_2pl"))]
         {
             // println!("{} {}", tuple.lock_tid(), self.ts.tid);
+            // assert!(tuple.lock_tid() == self.ts.tid);
             if tuple.lock_tid() == self.ts.tid {
-                // println!("unlock {:x} {}", self.tuple_id.get_address(), self.ts.tid);
                 // println!("{:?}", tuple.get_data(self.table.tuple_size));
                 tuple.set_lock_tid(0);
             }

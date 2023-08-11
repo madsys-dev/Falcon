@@ -53,10 +53,13 @@ impl<T> NBTree<T> {
     }
     pub fn last(&self, start: &u64, end: &u64) -> Option<TupleId> {
         unsafe {
+            // println!("{}, {}", start, end);
             let item = btree_last(self.root, *start, *end);
             if item == 0 {
                 return None;
             }
+            // println!("last {}", item & MASK);
+
             return Some(TupleId{page_start: AtomicU64::new(item & MASK)});
         }
     }

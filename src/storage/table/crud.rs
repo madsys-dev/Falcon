@@ -41,6 +41,7 @@ impl Table {
             .unwrap()
             .read()
             .free_tuple(tuple_id.get_address());
+        // println!("remove {:?}", tuple_id);
         return self.index_remove_by_tuple(tuple_id, &self.get_tuple(tuple_id));
         // return Ok(());
     }
@@ -233,9 +234,10 @@ impl Table {
             let cas_result = tuple.cas_lock_tid(0, ts.tid);
             #[cfg(feature = "clock")]
             timer.end(READING, READING);
-            // println!("lock {:x} {} {}", tuple_id.get_address(), lock_tid, ts.tid);
 
             if cas_result != 0 && cas_result != ts.tid {
+                // println!("lock {:x} {} {}", self.id, lock_tid, ts.tid);
+
                 return Err(TupleError::TupleChanged {
                     conflict_tid: cas_result,
                 }
@@ -567,7 +569,6 @@ impl Table {
         drop(tuple);
         #[cfg(feature = "buffer_pool")]
         let tuple = Tuple::reload(tuple_address);
-    
         self.update_tuple(
             &tuple,
             tuple_id,

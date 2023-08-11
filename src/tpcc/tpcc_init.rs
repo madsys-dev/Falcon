@@ -93,7 +93,7 @@ pub fn init_schema(file_name: impl AsRef<Path>) {
         catalog.set_pool_size("DISTRICT", 4000000 as usize); // 20480
         catalog.set_pool_size(
             "CUSTOMER",
-            4 * (WAREHOUSES * DISTRICTS_PER_WAREHOUSE * CUSTOMERS_PER_DISTRICT) as usize
+            (WAREHOUSES * DISTRICTS_PER_WAREHOUSE * CUSTOMERS_PER_DISTRICT) as usize
                 / POOL_PERC,
         ); // 6144_0000
         catalog.set_pool_size("ORDER", 1000000 as usize / POOL_PERC); // 6144_0000

@@ -384,9 +384,11 @@ impl Tuple {
         {
             return Ok(());
         }
-        // let tid = ts.load(Ordering::Relaxed);
+        let tid = ts.load(Ordering::Relaxed);
         // println!("{:x} {:x}", self._address(), tid);
-
+        if tid == txn_id | POW_2_63 {
+            return Ok(());
+        }
         return Err(TupleError::AcquireWriteLockFalse);
     }
     #[cfg(all(feature = "cc_cfg_2pl", feature = "read_ts"))]

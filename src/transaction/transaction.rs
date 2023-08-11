@@ -391,7 +391,7 @@ impl<'a> Transaction<'a> {
         tuple.set_ts(self.ts);
         tuple.set_next(0);
         #[cfg(feature = "cc_cfg_2pl")]
-        tuple.set_write_lock(self.ts.tid, 0);
+        tuple.lock_write(self.ts.tid, 0).unwrap();
         tuple.set_lock_tid(self.ts.tid);
         tuple
     }
@@ -452,7 +452,9 @@ impl<'a> Transaction<'a> {
                     }
                 }
             }
+
             if !self.read_only && tuple_nvm.lock_tid() != 0 && tuple_nvm.lock_tid() < self.ts.tid {
+                // println!("{:?} {} {}", tuple_nvm.lock_tid(), self.ts.tid, self.cur_min_txn);
                 return Err(TupleError::TupleChanged { conflict_tid: 0 }.into());
             }
             #[cfg(all(feature = "serializable"))]

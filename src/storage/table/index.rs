@@ -188,7 +188,6 @@ impl Table {
                                         conflict_tid: result,
                                     }));
                                 }
-                                
                             }
                         }
                         None => {
@@ -261,9 +260,11 @@ impl Table {
                     let key = String::from(str::from_utf8(key).unwrap());
                     let key = key.trim_end_matches(char::from(0));
 
-                    match index.get(key.clone(), key.len()) {
+                    match index.update(key.clone(), key.len(), TupleId::from_address(new_address)) {
                         Some(v) => {
-                            v.update(new_address);
+                            // v.update(new_address);
+                            // let v2 = index.get(key.clone(), key.len()).unwrap();
+                            // assert_eq!(v.get_address(), v2.get_address());
                         }
                         None => {
                             return Err(Error::Tuple(TupleError::KeyNotMatched));
@@ -698,6 +699,7 @@ impl Table {
             #[cfg(feature = "rust_map")]
             (TableIndex::Int64R(index), IndexType::Int64(u), IndexType::Int64(v)) => {
                 let guard = crossbeam_epoch::pin();
+                // println!("{} {}", u, v);
                 let (_, tid) = index.range(u..v, &guard).next_back().unwrap();
                 result = Ok(TupleId::from_address(tid.get_address()));
             },
@@ -714,7 +716,9 @@ impl Table {
 
             },
             (TableIndex::None, _, _) => return Err(Error::Tuple(TupleError::IndexNotBuilt)),
-            _ => return Err(Error::Tuple(TupleError::KeyNotMatched)),
+            _ => {
+                return Err(Error::Tuple(TupleError::KeyNotMatched));
+            }
         };
 
         match result {

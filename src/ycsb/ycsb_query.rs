@@ -108,8 +108,10 @@ impl YcsbQuery {
                 self.requests[i] = YcsbRequest::new(Operation::Read, key, "0".to_string(), column);
             } else if op <= prop.workload.read_perc + prop.workload.write_perc {
                 self.requests[i] = YcsbRequest::new(Operation::Update, key, value.clone(), column);
-            } else {
+            } else if op <= prop.workload.read_perc + prop.workload.write_perc + prop.workload.scan_perc {
                 self.requests[i] = YcsbRequest::new(Operation::Scan, key, "0".to_string(), column);
+            } else {
+                self.requests[i] = YcsbRequest::new(Operation::Insert, key, "0".to_string(), column);
             }
         }
         // self.requests.sort_by(|a, b| b.key.cmp(&a.key));

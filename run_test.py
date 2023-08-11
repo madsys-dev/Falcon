@@ -107,7 +107,7 @@ def report(features, result, t_cnt):
 
 
 def TIMEOUT_COMMAND(command, timeout):
-    """call shell-command and either return its output or kill it
+    """call shell-commpand and either return its output or kill it
     if it doesn't normally exit within timeout seconds and return None"""
     import subprocess, datetime, os, time, signal
     start = datetime.datetime.now()
@@ -116,7 +116,7 @@ def TIMEOUT_COMMAND(command, timeout):
         time.sleep(0.2)
         now = datetime.datetime.now()
         if (now - start).seconds > timeout:
-            os.kill(process.pid, signal.SIGKILL)
+            os.kill(process.pid)
             os.waitpid(-1, os.WNOHANG)
             return None
     return process.stdout.read().decode("utf-8")
@@ -154,18 +154,19 @@ def run_test(features, workload, result_path):
     print("test cmd: " + txt)
     text = ""
     r = os.popen("rm %s"%pm_index)
-    # r = os.popen(txt)
-    text = TIMEOUT_COMMAND(txt, 600)
-    if text == None:
-        with open("error.txt", "w") as err_file:
-            err_file.write(result_path)
-            err_file.write('\n')
-            err_file.write(str(k))
-            err_file.write('\n')
-            err_file.write(txt)
-            err_file.write('\n')
-        r.close()
-        return ""
+    r = os.popen(txt)
+    # text = TIMEOUT_COMMAND(txt, 600)
+    # if text == None:
+    #     with open("error.txt", "w") as err_file:
+    #         err_file.write(result_path)
+    #         err_file.write('\n')
+    #         err_file.write(str(k))
+    #         err_file.write('\n')
+    #         err_file.write(txt)
+    #         err_file.write('\n')
+    #     r.close()
+    #     return ""
+    text = r.read()
     r.close()
     print(features)
     
@@ -302,22 +303,22 @@ def test_tpcc_nvm():
             ["ycsb_a"], # only for compile
         ],
         "cc_cfg": [
-            # ["local_cc_cfg_to"],
-            # ["local_cc_cfg_2pl"],
+            ["local_cc_cfg_to"],
+            ["local_cc_cfg_2pl"],
             ["local_cc_cfg_occ"],
         ],  
         "mvcc": [
             [""],
-            # ["mvcc"]
+            ["mvcc"]
         ],
         "buffer": [
             sysname["Falcon"], sysname["Falcon(No Flush)"],
             sysname["Falcon(All Flush)"], sysname["Inp"],
-            sysname["Inp(Hot Tuple Cache)"], sysname["Outp"]
+            sysname["Outp"]
         ],
         "clock": [
             ["txn_clock", "new_order_clock"],
-            # ["txn_clock", "payment_clock"],
+            ["txn_clock", "payment_clock"],
         ],
         "thread_count": [[48]]
     }
@@ -427,7 +428,7 @@ if __name__ == "__main__":
     # test_ycsb_dram() # 6 test cases
 
     test_tpcc_nvm() # 60 test cases
-    # test_tpcc_dram() # 36 test cases
+    test_tpcc_dram() # 36 test cases
 
     # test_ycsb_scal() # 35 test cases
-    # test_tpcc_scal() # 35 test cases
+    test_tpcc_scal() # 35 test cases

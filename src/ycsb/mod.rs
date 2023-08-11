@@ -41,6 +41,7 @@ pub struct YCSBWorkload {
     pub write_perc: f64,
     pub scan_perc: f64,
     pub scan_len: u64,
+    pub insert_perc: f64,
     #[cfg(feature = "ycsb_mvcc")]
     pub ro_perc: f64,
 }
@@ -76,6 +77,7 @@ impl Properties {
                 write_perc: 0.9,
                 scan_perc: 0.0,
                 scan_len: 20,
+                insert_perc: 0.0,
                 #[cfg(feature = "ycsb_mvcc")]
                 ro_perc: 0.0,
             },
@@ -85,6 +87,7 @@ impl Properties {
                 write_perc: 0.5,
                 scan_perc: 0.0,
                 scan_len: 20,
+                insert_perc: 0.0,
                 #[cfg(feature = "ycsb_mvcc")]
                 ro_perc: 0.0,
             },
@@ -94,6 +97,7 @@ impl Properties {
                 write_perc: 0.05,
                 scan_perc: 0.0,
                 scan_len: 20,
+                insert_perc: 0.0,
             },
             #[cfg(feature = "ycsb_c")]
             workload: YCSBWorkload {
@@ -101,6 +105,23 @@ impl Properties {
                 write_perc: 0.0,
                 scan_perc: 0.0,
                 scan_len: 20,
+                insert_perc: 0.0,
+            },
+            #[cfg(feature = "ycsb_d")]
+            workload: YCSBWorkload {
+                read_perc: 0.95,
+                write_perc: 0.0,
+                scan_perc: 0.0,
+                scan_len: 100,
+                insert_perc: 0.05,
+            },
+            #[cfg(feature = "ycsb_e")]
+            workload: YCSBWorkload {
+                read_perc: 0.0,
+                write_perc: 0.0,
+                scan_perc: 0.95,
+                scan_len: 100,
+                insert_perc: 0.05,
             },
             #[cfg(feature = "ycsb_f")]
             workload: YCSBWorkload {
@@ -108,6 +129,7 @@ impl Properties {
                 write_perc: 0.5,
                 scan_perc: 0.0,
                 scan_len: 20,
+                insert_perc: 0.0,
                 #[cfg(feature = "ycsb_mvcc")]
                 ro_perc: 0.0,
             },

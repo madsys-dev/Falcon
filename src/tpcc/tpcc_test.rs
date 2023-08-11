@@ -79,56 +79,112 @@ mod tests {
                 let start = SystemTime::now();
 
                 loop {
-                    total = total + 1;
                     let pr = u64_rand(&mut rng, 1, 100);
                     if pr <= 43 {
                         let query = TpccQuery::gen_payment(&mut rng, i as u64);
-                        #[cfg(feature = "txn_clock")]
-                        timer.start(READING);
-                        if tpcc_txn_sycn::run_payment(&mut txn, &tablelist, &query) {
-                            num = num + 1;
+                        
+                        loop {
+                            total = total + 1;
 
-                            #[cfg(feature = "payment_clock")]
-                            timer.end(READING, READING);
+                            #[cfg(feature = "txn_clock")]
+                            timer.start(READING);
+                            // println!("{} payment", i);
+                            if tpcc_txn_sycn::run_payment(&mut txn, &tablelist, &query) {
+                                num = num + 1;
+    
+                                #[cfg(feature = "payment_clock")]
+                                timer.end(READING, READING);
+                                break;
+                            }
+                            let end = SystemTime::now();
+                            if end.duration_since(start).unwrap().ge(&total_time) {
+                                break;
+                            }
                         }
+                        
                     } else if pr <= 88 {
                         let query = TpccQuery::gen_new_order(&mut rng, i as u64);
-                        #[cfg(feature = "txn_clock")]
-                        timer.start(READING);
-                        if tpcc_txn_sycn::run_new_order(&mut txn, &tablelist, &query) {
-                            num = num + 1;
+                        loop {
+                            total = total + 1;
 
-                            #[cfg(feature = "new_order_clock")]
-                            timer.end(READING, READING);
+                            #[cfg(feature = "txn_clock")]
+                            timer.start(READING);
+                            // println!("{} new_order", i);
+
+                            if tpcc_txn_sycn::run_new_order(&mut txn, &tablelist, &query) {
+                                num = num + 1;
+
+                                #[cfg(feature = "new_order_clock")]
+                                timer.end(READING, READING);
+                                break;
+                            }
+                            let end = SystemTime::now();
+                            if end.duration_since(start).unwrap().ge(&total_time) {
+                                break;
+                            }
                         }
                     } else if pr <= 92 {
                         let query = TpccQuery::gen_stock_level(&mut rng, i as u64);
-                        #[cfg(feature = "txn_clock")]
-                        timer.start(READING);
-                        if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
-                            num = num + 1;
-                            #[cfg(feature = "stock_level_clock")]
-                            timer.end(READING, READING);
+                        loop {
+                            total = total + 1;
+
+                            #[cfg(feature = "txn_clock")]
+                            timer.start(READING);
+                            // println!("{} stock_level", i);
+
+                            if tpcc_txn_sycn::run_stock_level(&mut txn, &tablelist, &query) {
+                                num = num + 1;
+    
+                                #[cfg(feature = "stock_level_clock")]
+                                timer.end(READING, READING);
+                                break;
+                            }
+                            let end = SystemTime::now();
+                            if end.duration_since(start).unwrap().ge(&total_time) {
+                                break;
+                            }
                         }
                             
                     } else if pr <= 96 {
                         let query = TpccQuery::gen_order_status(&mut rng, i as u64);
-                        #[cfg(feature = "txn_clock")]
-                        timer.start(READING);
-                        if tpcc_txn_sycn::run_order_status(&mut txn, &tablelist, &query) {
-                            num = num + 1;
-                            #[cfg(feature = "order_status_clock")]
-                            timer.end(READING, READING);
+                        loop {
+                            println!("{} order_status", i);
+                            total = total + 1;
+
+                            #[cfg(feature = "txn_clock")]
+                            timer.start(READING);
+                            if tpcc_txn_sycn::run_order_status(&mut txn, &tablelist, &query) {
+                                num = num + 1;
+                                #[cfg(feature = "order_status_clock")]
+                                timer.end(READING, READING);
+                                break;
+                            }
+                            let end = SystemTime::now();
+                            if end.duration_since(start).unwrap().ge(&total_time) {
+                                break;
+                            }
                         }
                     } else {
                         let query = TpccQuery::gen_deliver(&mut rng, i as u64);
-                        #[cfg(feature = "txn_clock")]
-                        timer.start(READING);
-                        if tpcc_txn_sycn::run_deliver(&mut txn, &tablelist, &query) {
-                            num = num + 1;
-                            #[cfg(feature = "deliver_clock")]
-                            timer.end(READING, READING);
+                        loop {
+                            total = total + 1;
+                            println!("{} deliver", i);
+
+                            #[cfg(feature = "txn_clock")]
+                            timer.start(READING);
+                            if tpcc_txn_sycn::run_deliver(&mut txn, &tablelist, &query) {
+                                num = num + 1;
+                                #[cfg(feature = "deliver_clock")]
+                                timer.end(READING, READING);
+                                break;
+                            }
+                            let end = SystemTime::now();
+                            if end.duration_since(start).unwrap().ge(&total_time) {
+                                break;
+                            }
+
                         }
+                        
                     }
                     
                     let end = SystemTime::now();
