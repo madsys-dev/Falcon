@@ -8,6 +8,7 @@ mod test {
     use std::time::{Duration, SystemTime};
 
     use crate::config::{CATALOG_ADDRESS, POOL_PERC};
+    use crate::customer_config::YCSB_TOTAL;
     use crate::mvcc_config::{TEST_THREAD_COUNT, THREAD_COUNT, TRANSACTION_COUNT};
     use crate::storage::catalog::{self, Catalog};
     // use crate::storage::index::nbtree::NBTree;
@@ -43,6 +44,9 @@ mod test {
         }
         let catalog = Catalog::global();
         catalog.add_table("usertable", schema).unwrap();
+        #[cfg(feature = "ycsb_e")]
+        catalog.set_range_primary_key("usertable", 0);
+        #[cfg(not(feature = "ycsb_e"))]
         catalog.set_primary_key("usertable", 0);
 
         #[cfg(feature = "buffer_pool")]
@@ -68,7 +72,7 @@ mod test {
                             value.push_str(String::from("123").as_str());
                         }
                         ycsb_txn.begin();
-                        ycsb_txn.insert(&table, value.as_str());
+                        ycsb_txn.insert_init(&table, value.as_str());
                         assert!(ycsb_txn.commit());
                         if key % 1000000 == 0 {
                             println!("{}", key);
@@ -109,7 +113,7 @@ mod test {
         let mut ycsb_txn = YcsbTxn::new(props, &mut buffer);
         let table = catalog.get_table("usertable");
         ycsb_txn.begin();
-        ycsb_txn.insert(&table, &input);
+        ycsb_txn.insert_init(&table, &input);
         assert!(ycsb_txn.commit());
 
         ycsb_txn.begin();
@@ -196,7 +200,8 @@ mod test {
         let theta_set = [0.99, 0.0];
         #[cfg(feature = "ycsb_mvcc")]
         let theta_set = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-
+        let key_counter = Arc::new(AtomicU64::new(YCSB_TOTAL));
+        let mut offset: usize = THREAD_COUNT;
         for theta in theta_set {
             #[cfg(feature = "ycsb_mvcc")]
             {
@@ -209,10 +214,11 @@ mod test {
             }
             let table = catalog.get_table("usertable");
             let barrier = Arc::new(Barrier::new(TEST_THREAD_COUNT));
-
+            let b_tree_offset = offset;
             for i in 0..TEST_THREAD_COUNT {
                 let b = barrier.clone();
                 let tx = tx0.clone();
+                let counter = key_counter.clone();
                 thread::spawn(move || {
                     let mut buffer = TransactionBuffer::new(catalog, (i) as u64);
                     let mut ycsb_txn = YcsbTxn::new(props, &mut buffer);
@@ -220,9 +226,11 @@ mod test {
                     println!("test start {}", i);
                     let mut num = 0;
                     let mut total = 0;
-                    let mut query = YcsbQuery::new(&props);
+                    let mut query = YcsbQuery::new(&props, &counter);
                     let mut rng = rand::thread_rng();
                     let mut retry = 0;
+                    #[cfg(feature = "nbtree")]
+                    crate::storage::index::nbtree::init_index((i+b_tree_offset) as i32);
                     #[cfg(feature = "append")]
                     table.pre_alloc(100);
                     b.wait();
@@ -306,7 +314,7 @@ mod test {
                     // buffer.free();
                 });
             }
-
+            offset += TEST_THREAD_COUNT;
             let mut num = 0;
             let mut total = 0;
             let mut swapt = 0.0;
@@ -436,9 +444,11 @@ mod test {
         let catalog = Catalog::global();
         let total_time = Duration::new(10, 0);
         let (tx0, rx) = mpsc::channel();
+        let key_counter = Arc::new(AtomicU64::new(YCSB_TOTAL));
 
         for i in 0..THREAD_COUNT {
             let tx = tx0.clone();
+            let counter = key_counter.clone();
             thread::spawn(move || {
                 let mut buffer = TransactionBuffer::new(catalog, (i) as u64);
                 let mut ycsb_txn = YcsbTxn::new(props, &mut buffer);
@@ -446,7 +456,7 @@ mod test {
                 println!("test start {}", i);
                 let mut num = 0;
                 let mut total = 0;
-                let mut query = YcsbQuery::new(&props);
+                let mut query = YcsbQuery::new(&props, &counter);
                 let start = SystemTime::now();
                 let mut rng = rand::thread_rng();
                 let mut retry = 0;

@@ -148,7 +148,7 @@ mod tests {
                     } else if pr <= 96 {
                         let query = TpccQuery::gen_order_status(&mut rng, i as u64);
                         loop {
-                            println!("{} order_status", i);
+                            // println!("{} order_status", i);
                             total = total + 1;
 
                             #[cfg(feature = "txn_clock")]
@@ -168,7 +168,7 @@ mod tests {
                         let query = TpccQuery::gen_deliver(&mut rng, i as u64);
                         loop {
                             total = total + 1;
-                            println!("{} deliver", i);
+                            // println!("{} deliver", i);
 
                             #[cfg(feature = "txn_clock")]
                             timer.start(READING);

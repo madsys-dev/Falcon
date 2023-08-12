@@ -5,12 +5,14 @@ use rand::prelude::ThreadRng;
 use crate::storage::schema::Column;
 
 use super::{f64_rand_new, u64_rand_new, Operation, Properties};
-
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 pub struct YcsbRequest {
     pub op: Operation,
     pub key: u64,
     pub value: String,
     pub column: usize,
+    pub scan_len: u64,
 }
 impl YcsbRequest {
     pub fn new(op: Operation, key: u64, value: String, column: usize) -> Self {
@@ -19,18 +21,29 @@ impl YcsbRequest {
             key,
             value,
             column,
+            scan_len: 0,
+        }
+    }
+    pub fn new_scan(op: Operation, key: u64, value: String, column: usize, scan_len: u64) -> Self {
+        YcsbRequest {
+            op,
+            key,
+            value,
+            column,
+            scan_len,
         }
     }
 }
-pub struct YcsbQuery {
+pub struct YcsbQuery<'a> {
     pub requests: Vec<YcsbRequest>,
     zeta_2_theta: f64,
     denom: f64,
     rng: ThreadRng,
+    counter: &'a AtomicU64,
 }
 
-impl YcsbQuery {
-    pub fn new(prop: &Properties) -> Self {
+impl<'a> YcsbQuery<'a> {
+    pub fn new(prop: &Properties, counter: &'a AtomicU64) -> Self {
         let mut requests = Vec::new();
         requests.reserve(prop.req_per_query);
         for _ in 0..prop.req_per_query {
@@ -45,6 +58,7 @@ impl YcsbQuery {
             zeta_2_theta,
             denom: Properties::zeta(prop.table_size, prop.zipf_theta),
             rng: rand::thread_rng(),
+            counter,
         };
         ycsb.gen_request(prop);
         ycsb
@@ -87,9 +101,19 @@ impl YcsbQuery {
         for i in 0..prop.req_per_query {
             let op = f64_rand_new(&mut self.rng, 0.0, 1.0, 0.01);
 
+            #[cfg(feature = "ycsb_d")]
+            let mut key = self.counter.load(Ordering::Relaxed) - self.zipf(self.counter.load(Ordering::Relaxed), prop.zipf_theta);
+            #[cfg(feature = "ycsb_e")]
+            let mut key = self.zipf(self.counter.load(Ordering::Relaxed) - prop.workload.scan_len, prop.zipf_theta);
+            #[cfg(not(all(feature = "ycsb_d", feature = "ycsb_e")))]
             let mut key = self.zipf(prop.table_size, prop.zipf_theta);
             while v.contains(&key) {
-                key = self.zipf(prop.table_size, prop.zipf_theta)
+                #[cfg(feature = "ycsb_d")]
+                {key = self.counter.load(Ordering::Relaxed) - self.zipf(self.counter.load(Ordering::Relaxed), prop.zipf_theta);}
+                #[cfg(feature = "ycsb_e")]
+                {key = self.zipf(self.counter.load(Ordering::Relaxed) - prop.workload.scan_len, prop.zipf_theta);}
+                #[cfg(not(all(feature = "ycsb_d", feature = "ycsb_e")))]
+                {key = self.zipf(prop.table_size, prop.zipf_theta);}
             }
             v.insert(key);
             let column = u64_rand_new(&mut self.rng, 1, prop.field_per_tuple) as usize;
@@ -98,10 +122,17 @@ impl YcsbQuery {
             // TODO fix ycsb_f in revision
             #[cfg(feature = "ycsb_f")]
             {
-                self.requests[i * 2] =
-                    YcsbRequest::new(Operation::Read, key, "0".to_string(), column);
-                self.requests[i * 2 + 1] =
-                    YcsbRequest::new(Operation::Update, key, value.clone(), column);
+                if ro || op <= prop.workload.read_perc {
+                    self.requests[i*2] = YcsbRequest::new(Operation::Read, key, "0".to_string(), column);
+                    self.requests[i * 2 + 1] = YcsbRequest::new(Operation::Nop, key, "0".to_string(), column);
+
+                } 
+                else {
+                    self.requests[i * 2] =
+                        YcsbRequest::new(Operation::Read, key, "0".to_string(), column);
+                    self.requests[i * 2 + 1] =
+                        YcsbRequest::new(Operation::Update, key, value.clone(), column);
+                }
             }
             #[cfg(not(feature = "ycsb_f"))]
             if ro || op <= prop.workload.read_perc {
@@ -109,9 +140,9 @@ impl YcsbQuery {
             } else if op <= prop.workload.read_perc + prop.workload.write_perc {
                 self.requests[i] = YcsbRequest::new(Operation::Update, key, value.clone(), column);
             } else if op <= prop.workload.read_perc + prop.workload.write_perc + prop.workload.scan_perc {
-                self.requests[i] = YcsbRequest::new(Operation::Scan, key, "0".to_string(), column);
+                self.requests[i] = YcsbRequest::new_scan(Operation::Scan, key, "0".to_string(), column, u64_rand_new(&mut self.rng, 1, prop.workload.scan_len));
             } else {
-                self.requests[i] = YcsbRequest::new(Operation::Insert, key, "0".to_string(), column);
+                self.requests[i] = YcsbRequest::new(Operation::Insert, self.counter.fetch_add(1, Ordering::Relaxed), "0".to_string(), column);
             }
         }
         // self.requests.sort_by(|a, b| b.key.cmp(&a.key));
@@ -119,13 +150,15 @@ impl YcsbQuery {
 }
 #[cfg(test)]
 mod test {
-    use super::Properties;
 
+    use super::Properties;
+    use std::sync::atomic::AtomicU64;
     use super::YcsbQuery;
     #[test]
     fn test_zipf() {
         let prop = Properties::default();
-        let mut query = YcsbQuery::new(&prop);
+        let counter = AtomicU64::new(0);
+        let mut query = YcsbQuery::new(&prop, &counter);
         for i in 0..10_000_000 {
             let key = query.zipf(prop.table_size, prop.zipf_theta);
             println!("{}", key);

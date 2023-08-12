@@ -103,11 +103,11 @@ for result in results:
     ycsb[sysname][workload] = commits
 
 collect_csv += "YCSB-48 \n"
-collect_csv += "sysname,au,az,fu,fz\n"
+collect_csv += "sysname,au,az,bu,bz,cu,cz,du,dz,eu,ez,fu,fz\n"
 for sysname in sysnames:
     collect_csv += sysname
     try:
-        for w in ['aU', 'aZ', 'fU', 'fZ']:
+        for w in ['aU', 'aZ', 'bU', 'bZ', 'cU', 'cZ', 'dU', 'dZ', 'eU', 'eZ', 'fU', 'fZ']:
             collect_csv += "," + str(ycsb[sysname][w])
     except:
         pass

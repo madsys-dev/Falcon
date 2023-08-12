@@ -1,7 +1,7 @@
 use crate::{
     storage::{
         global::{Timer, READING},
-        table::{IndexType, Table},
+        table::{IndexType, Table, TupleId},
     },
     transaction::{transaction::Transaction, transaction_buffer::TransactionBuffer},
 };
@@ -100,10 +100,47 @@ impl<'a> YcsbTxn<'a> {
         }
     }
 
-    pub fn scan(&self, table: &Table, start_key: u64, record_count: u64) -> bool {
+    pub fn scan(&mut self, table: &'a Table, start_key: u64, scan_len: u64, column: usize) -> bool {
+        let max_key = start_key + scan_len;
+        let min_key = start_key;
+        let lines:Vec<TupleId>;
+
+        match table.range_tuple_id(&IndexType::Int64(min_key), &IndexType::Int64(max_key)) {
+            Ok(l) => {
+                lines = l;
+                println!("{:?}", lines);
+            },
+            _ => {
+                println!("read {} old from {} to {}", start_key, min_key, max_key);
+                self.txn.abort();
+                return false;
+            }
+        }
+
+        for tid in lines {
+            if tid.get_address() < crate::config::NVM_ADDR {
+                return false;
+            }
+            match self.txn.read_column(table, &tid, column) {
+                Ok(vec) => {
+                    self.read_buf = vec.data[0];
+                    // #[cfg(feature = "txn_clock")]
+                    // self.timer.end(READING, READING);
+                    return true;
+                }
+                _ => {
+                    return false;
+                }
+            }
+        }
         true
     }
-
+    pub fn insert(&mut self, table: &'a Table, start_key: u64, data: &[u8]) -> bool {
+        let mut tuple = self.txn.alloc(table);
+        tuple.save(data.len() as u64, data);
+        table.index_insert_by_tuple(&TupleId::from_address(tuple._address()), &tuple).unwrap();
+        true
+    }
     pub fn update(&mut self, table: &'a Table, key: u64, column: usize, data: &[u8]) -> bool {
         match table.search_tuple_id(&IndexType::Int64(key)) {
             
@@ -150,7 +187,7 @@ impl<'a> YcsbTxn<'a> {
         }
     }
 
-    pub fn insert(&mut self, table: &'a Table, value: &str) -> bool {
+    pub fn insert_init(&mut self, table: &'a Table, value: &str) -> bool {
         self.txn.insert(table, value);
         true
     }
@@ -203,10 +240,19 @@ impl<'a> YcsbTxn<'a> {
                     }
                 }
                 Operation::Scan => {
-                    if !self.scan(table, req.key, self.props.workload.scan_len) {
+                    if !self.scan(table, req.key, req.scan_len, req.column) {
                         self.txn.abort();
                         return false;
                     }
+                }
+                Operation::Insert => {
+                    if !self.insert(table, req.key, req.value.as_bytes()) {
+                        self.txn.abort();
+                        return false;
+                    }
+                }
+                Operation::Nop => {
+                    
                 }
                 _ => {
                     self.txn.abort();
@@ -216,45 +262,54 @@ impl<'a> YcsbTxn<'a> {
         }
         self.commit()
     }
-    pub async fn run_txn_async(&mut self, table: &'a Table, query: &YcsbQuery) -> bool {
-        self.txn.read_only = true;
-        for req in &query.requests {
-            if req.op != Operation::Read {
-                self.txn.read_only = false;
-                break;
-            }
-        }
-        self.txn.begin();
-        self.result = Ok(());
-        for req in &query.requests {
-            match req.op {
-                Operation::Read => {
-                    if !self.async_read(table, req.key, req.column).await {
-                        self.txn.abort();
-                        return false;
-                    }
-                }
-                Operation::Update => {
-                    if !self
-                        .async_update(table, req.key, req.column, req.value.as_bytes())
-                        .await
-                    {
-                        self.txn.abort();
-                        return false;
-                    }
-                }
-                Operation::Scan => {
-                    if !self.scan(table, req.key, self.props.workload.scan_len) {
-                        self.txn.abort();
-                        return false;
-                    }
-                }
-                _ => {
-                    self.txn.abort();
-                    return false;
-                }
-            }
-        }
-        self.txn.commit()
-    }
+    // pub async fn run_txn_async(&mut self, table: &'a Table, query: &YcsbQuery) -> bool {
+    //     self.txn.read_only = true;
+    //     for req in &query.requests {
+    //         if req.op != Operation::Read {
+    //             self.txn.read_only = false;
+    //             break;
+    //         }
+    //     }
+    //     self.txn.begin();
+    //     self.result = Ok(());
+    //     for req in &query.requests {
+    //         match req.op {
+    //             Operation::Read => {
+    //                 if !self.async_read(table, req.key, req.column).await {
+    //                     self.txn.abort();
+    //                     return false;
+    //                 }
+    //             }
+    //             Operation::Update => {
+    //                 if !self
+    //                     .async_update(table, req.key, req.column, req.value.as_bytes())
+    //                     .await
+    //                 {
+    //                     self.txn.abort();
+    //                     return false;
+    //                 }
+    //             }
+    //             Operation::Scan => {
+    //                 if !self.scan(table, req.key, self.props.workload.scan_len) {
+    //                     self.txn.abort();
+    //                     return false;
+    //                 }
+    //             }
+    //             Operation::Insert => {
+    //                 if !self.insert(table, req.key, req.value.as_bytes()) {
+    //                     self.txn.abort();
+    //                     return false;
+    //                 }
+    //             }
+    //             Operation::Nop => {
+                    
+    //             }
+    //             _ => {
+    //                 self.txn.abort();
+    //                 return false;
+    //             }
+    //         }
+    //     }
+    //     self.txn.commit()
+    // }
 }

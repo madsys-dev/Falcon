@@ -356,7 +356,7 @@ impl Catalog {
         //TODO Reload
         let mut new_table = Table::new(table.schema.clone(), table_address, table.id);
         for key in table.get_index_key() {
-            if table_name == "ORDER-LINE" || table_name == "NEW-ORDER" {
+            if table_name == "ORDER-LINE" || table_name == "NEW-ORDER" || table_name == "usertable" {
                 new_table.add_range_index(*key).unwrap();
             }
             else {

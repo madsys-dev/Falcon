@@ -33,6 +33,7 @@ pub enum Operation {
     Insert,
     Scan,
     Delete,
+    Nop,
 }
 
 #[derive(Debug, Clone, Copy)]

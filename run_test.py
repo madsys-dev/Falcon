@@ -133,7 +133,7 @@ def run_test(features, workload, result_path):
     #     return ""
     # if k not in [112]:
     #     return ""
-    # if "mvcc" in features and "zen_local" in features:
+    # if "tpcc" in features and "n2db_append" not in features:
     #     return ""
 
     result_csv = ""
@@ -234,7 +234,7 @@ def test_ycsb_nvm():
     props = {
         "basic": [["basic"]],
         "ycsb": [
-            ["ycsb_a"], ["ycsb_f"], 
+            ["ycsb_a"], ["ycsb_b"], ["ycsb_c"], ["ycsb_d"], ["ycsb_e"], ["ycsb_f"], 
         ],
         "cc_cfg": [
             # ["local_cc_cfg_to"],
@@ -267,7 +267,7 @@ def test_ycsb_dram():
     props = {
         "basic": [["basic_dram"]],
         "ycsb": [
-            ["ycsb_a"], ["ycsb_f"], 
+            ["ycsb_a"], ["ycsb_b"], ["ycsb_c"], ["ycsb_d"], ["ycsb_e"], ["ycsb_f"], 
         ],
         "cc_cfg": [
             # ["local_cc_cfg_to"],
@@ -424,11 +424,11 @@ def test_tpcc_scal():
 
 if __name__ == "__main__":
 
-    # test_ycsb_nvm() # 10 test cases
-    # test_ycsb_dram() # 6 test cases
+    test_ycsb_nvm() # 10 test cases
+    test_ycsb_dram() # 6 test cases
 
-    test_tpcc_nvm() # 60 test cases
-    test_tpcc_dram() # 36 test cases
+    # test_tpcc_nvm() # 60 test cases
+    # test_tpcc_dram() # 36 test cases
 
-    # test_ycsb_scal() # 35 test cases
+    test_ycsb_scal() # 35 test cases
     test_tpcc_scal() # 35 test cases
