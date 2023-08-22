@@ -23,7 +23,19 @@ source build.sh
 ```
 For more information, please refer to https://github.com/baotonglu/dash. 
 
-If installing Dash is difficult, you can use Rust indexes directly to test Falcon.
+Init NBTree:
+```bash
+git pull --recurse-submodules
+source build.sh
+```
+or
+```bash
+git clone https://github.com/madsys-dev/NBTree.git
+source build.sh
+```
+For more information, please refer to https://github.com/SJTU-DDST/NBTree 
+
+If installing Dash or NBTree is difficult, you can use Rust indexes directly to test Falcon.
 
 ## Settings
 
