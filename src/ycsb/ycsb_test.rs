@@ -130,6 +130,9 @@ mod test {
         let mut props = Properties::default();
         // ycsb_test_reload();
         // reload(true);
+        // #[cfg(feature = "ycsb_size")]
+        // let size_set = [0x40, 0x80, 0x100, 0x200, 0x400, 0x1000, 0x4000, 0x10000, 0x40000, 0x100000];
+   
         init_all(props);
         init_data(props);
         let catalog = Catalog::global();
@@ -198,8 +201,11 @@ mod test {
             .unwrap();
         #[cfg(not(feature = "ycsb_mvcc"))]
         let theta_set = [0.99, 0.0];
+        #[cfg(feature = "ycsb_size")]
+        let theta_set = [0.0];
         #[cfg(feature = "ycsb_mvcc")]
         let theta_set = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+        
         let key_counter = Arc::new(AtomicU64::new(YCSB_TOTAL));
         let mut offset: usize = THREAD_COUNT;
         for theta in theta_set {

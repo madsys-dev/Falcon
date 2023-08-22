@@ -356,12 +356,17 @@ impl Catalog {
         //TODO Reload
         let mut new_table = Table::new(table.schema.clone(), table_address, table.id);
         for key in table.get_index_key() {
-            if table_name == "ORDER-LINE" || table_name == "NEW-ORDER" || table_name == "usertable" {
+            if table_name == "usertable"
+            {
+                #[cfg(feature = "ycsb_e")]
+                new_table.add_range_index(*key).unwrap();
+                #[cfg(not(feature = "ycsb_e"))]
+                new_table.add_index(*key).unwrap();
+            } else if table_name == "ORDER-LINE" || table_name == "NEW-ORDER" {
                 new_table.add_range_index(*key).unwrap();
             }
             else {
                 new_table.add_index(*key).unwrap();
-
             }
         }
         new_table.set_pool_size(size);

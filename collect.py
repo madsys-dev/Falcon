@@ -162,6 +162,17 @@ for workload in ["0", "0.99"]:
         collect_csv += "\n"
     collect_csv += "\n"
 
+sysnames = ["Falcon", "Inp", "Outp"]
+results = collect(["ycsb_size"])
+ycsb = {}
+for result in results:
+    sysname = result[0]
+    commits = int(result[4])
+    threads = result[2]
+    print(commits)
+    # ycsb.setdefault(sysname, {})
+    # ycsb[sysname][threads] = commits
+
 with open("data.csv", "w") as output_csv:
     output_csv.write(total_csv)
 

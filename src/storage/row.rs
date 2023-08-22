@@ -30,8 +30,10 @@ pub const TID: Range<u64> = range!(0, size_of::<TimeStamp>() as u64);
 pub const NEXT_DELTA_ADDRESS: Range<u64> = range!(TID.end, U64_OFFSET);
 pub const DELETE_FLAG: Range<u64> = range!(NEXT_DELTA_ADDRESS.end, U64_OFFSET);
 pub const LOCK_TID: Range<u64> = range!(DELETE_FLAG.end, U64_OFFSET);
-#[cfg(feature = "align")]
-pub const TUPLE_HEADER: usize = 248 as usize;
+#[cfg(all(feature = "align", not(feature = "large")))]
+pub const TUPLE_HEADER: usize = crate::mvcc_config::YCSB_SIZE-8 as usize;
+#[cfg(all(feature = "align", feature = "large"))]
+pub const TUPLE_HEADER: usize = 248;
 #[cfg(not(feature = "align"))]
 pub const TUPLE_HEADER: usize = LOCK_TID.end as usize;
 pub const DELETE_MASK: u64 = 1;

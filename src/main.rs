@@ -14,7 +14,7 @@ use n2db::storage::index::nbtree::NBTree;
 // use chrono::prelude::*;
 
 // use n2db::c::ffi::{init, plus};
-
+#[cfg(feature = "rust_map")]
 pub fn test_bztree() {
     use bztree::BzTree;
 
@@ -116,6 +116,8 @@ fn test_nbtree()
 }
 fn main() {
     
+    #[cfg(feature = "nbtree")]
+    test_nbtree();
     // ------------datetime------
     // let dt = Local::now();
     // println!("dt: {}", dt);

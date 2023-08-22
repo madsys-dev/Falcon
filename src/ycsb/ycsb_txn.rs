@@ -108,10 +108,10 @@ impl<'a> YcsbTxn<'a> {
         match table.range_tuple_id(&IndexType::Int64(min_key), &IndexType::Int64(max_key)) {
             Ok(l) => {
                 lines = l;
-                println!("{:?}", lines);
+                // println!("{:?}", lines);
             },
             _ => {
-                println!("read {} old from {} to {}", start_key, min_key, max_key);
+                // println!("read {} old from {} to {}", start_key, min_key, max_key);
                 self.txn.abort();
                 return false;
             }

@@ -339,14 +339,14 @@ impl<'a> WriteSetStruct<'a> {
     }
 }
 
-pub const CountStart: usize = 50;
+pub const COUNT_START: usize = 50;
 pub const FMASK: u64 = (1 << 50) - 1;
 #[cfg(feature = "tpcc")]
-pub const GROUP: u64 = 1 << 12;
+pub const GROUP: u64 = 1 << 13;
 #[cfg(not(feature = "tpcc"))]
 pub const GROUP: u64 = 1 << 12;
 #[cfg(feature = "tpcc")]
-pub const SET: usize = 32;
+pub const SET: usize = 8;
 #[cfg(not(feature = "tpcc"))]
 pub const SET: usize = 32;
 
@@ -369,7 +369,7 @@ impl FlushCache {
         let caches = &mut self.tuple_id[k as usize];
         for cache in caches {
             if access == *cache & FMASK {
-                let count = *cache >> CountStart;
+                let count = *cache >> COUNT_START;
                 if count < 10000 {
                     *cache += FMASK + 1;
                 }
@@ -383,7 +383,7 @@ impl FlushCache {
             }
 
             let cache = caches[self.counter];
-            let count = cache >> CountStart;
+            let count = cache >> COUNT_START;
             if count == 0 {
                 caches[self.counter] = access;
                 self.counter += 1;

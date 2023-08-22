@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use crate::config::Address;
 use crate::config::POW_2_63;
+use crate::mvcc_config::delta;
 use crate::storage::catalog::*;
+use crate::storage::delta::TupleDelta;
 use crate::storage::global::*;
 use crate::storage::row::Tuple;
 use crate::storage::row::*;
@@ -249,6 +251,15 @@ impl<'a> Transaction<'a> {
                 {
                     k += 1;
                 }
+                let delta_address = self.txn_buffer.alloc();
+                let mut insert_delta = TupleDelta::new(delta_address, 0, ws.tuple_id.get_address()).unwrap();
+                insert_delta.set_meta_data(delta::DELTA_COLUMN_OFFSET, 0 as u32);
+                insert_delta.set_meta_data(delta::DELTA_COLUMN_OFFSET, 0 as u32);
+                insert_delta.set_meta_data(delta::DELTA_TABLE_ID, ws.table.id);
+                insert_delta.set_meta_data(delta::TID, self.ts);
+                #[cfg(not(feature = "ilog"))]
+                insert_delta.clwb();
+                self.txn_buffer.add_delta(insert_delta.len());
                 continue;
             }
             #[cfg(feature = "zen")]
@@ -431,7 +442,8 @@ impl<'a> Transaction<'a> {
         // println!("read");
 
         let mut latest = true;
-
+        // #[cfg(feature = "hot_unflush")]
+        // let flush = self.flush_cache.access(tuple_id.get_address());
         loop {
             // println!("txn {} read {}", self.ts.tid, tuple_ts.tid);
             // println!("{}", tuple_ts);
@@ -716,7 +728,8 @@ impl<'a> Transaction<'a> {
         // return Ok(tuple);
 
         // println!("read");
-
+        // #[cfg(feature = "hot_unflush")]
+        // let flush = self.flush_cache.access(tuple_id.get_address());
         let mut latest = true;
 
         loop {

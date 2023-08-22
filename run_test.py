@@ -26,7 +26,7 @@ def copy(dir, file):
     print(cmd)
     os.system(cmd)
 
-def set_thread_count(thread_count):
+def set_thread_count(thread_count, ycsb_size = 2048):
     path = './src/mvcc_config/mod.rs'
     # print(thread_count)
     with open(path, "w") as cfile:
@@ -34,6 +34,7 @@ def set_thread_count(thread_count):
         cfile.write("pub const THREAD_COUNT: usize = 48;\n")
         cfile.write("pub const TEST_THREAD_COUNT: usize = %d;\n" % (thread_count))
         cfile.write("pub const TRANSACTION_COUNT: usize = THREAD_COUNT;\n")
+        cfile.write("pub const YCSB_SIZE:usize = %d;" % (ycsb_size))
 
 def get_sysname(features):
     global index_type
@@ -127,13 +128,13 @@ def run_test(features, workload, result_path):
 
     k += 1
     # test tasks filter
-    # if k <= 20 and result_path == "tpcc_nvm":
+    # if k > 22 or "n2db_local" in features:
     #     return ""
     # if k <= 18 and result_path == "tpcc_scal":
     #     return ""
     # if k not in [112]:
     #     return ""
-    # if "tpcc" in features and "n2db_append" not in features:
+    # if "tpcc" in features and "hot_unflush" not in features:
     #     return ""
 
     result_csv = ""
@@ -141,15 +142,21 @@ def run_test(features, workload, result_path):
     # txt = "taskset -c 1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79,81,83,85,87,89,91,93,95,97,99 cargo test "  + workload
     txt = numa_set + " cargo test "  + workload
     t_cnt = 16
+    ycsb_size = 2048
     for f in features:
         if f == "":
             continue
         if type(f) == int:
-            set_thread_count(f)
-            t_cnt = f
-            continue
+            if f < 64:
+                t_cnt = f
+                continue
+            else:
+                ycsb_size = f
+                continue
         txt += " --features " + f
         # result_csv += f + " "
+    set_thread_count(t_cnt, ycsb_size)
+
     txt += " --no-default-features --release -- --nocapture"
     print("test cmd: " + txt)
     text = ""
@@ -172,6 +179,10 @@ def run_test(features, workload, result_path):
     
     features.remove(t_cnt)
     features.append(str(t_cnt))
+    if ycsb_size not in features:
+        features.append(ycsb_size)
+    features.remove(ycsb_size)
+    features.append(str(ycsb_size))
     # print(features)
     for line in text.splitlines():
         if "total" in line:
@@ -198,6 +209,8 @@ def run_test(features, workload, result_path):
     features.remove(str(t_cnt))
     features.append(t_cnt)
 
+    features.remove(str(ycsb_size))
+    features.append(ycsb_size)
     return result_csv
 
 def test(features, props, prop_list, workload, result_path, times = 1):
@@ -391,6 +404,86 @@ def test_ycsb_scal():
     test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_scal")
 
 
+def test_ycsb_scal():
+    global k
+    global index_type
+    k = 0
+    index_type = "NVM"
+    set_index("ycsb")
+
+    props = {
+        "basic": [["basic"]],
+        "ycsb": [
+            ["ycsb_a"], 
+        ],
+        "cc_cfg": [
+            # ["local_cc_cfg_to"],
+            # ["local_cc_cfg_2pl"],
+            ["local_cc_cfg_occ"],
+        ],  
+        "mvcc": [
+            [""],
+            # ["mvcc"]
+        ],
+        "buffer": [
+            sysname["Falcon"], sysname["Inp"],
+            sysname["Falcon(All Flush)"],            
+            sysname["Inp(No Flush)"],
+            sysname["Inp(Hot Tuple Cache)"],
+        ],
+        "thread_count": [[1],[2],[4],[8],[16],[32],[48]]
+    }
+    test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_scal")
+
+def test_size():
+    global k
+    global index_type
+    k = 0
+    index_type = "DRAM"
+
+    props = {
+        "basic": [["basic_dram", "ycsb_size", "align"]],
+        "ycsb": [
+            ["ycsb_a"],
+        ],
+        "cc_cfg": [
+            ["local_cc_cfg_occ"],
+        ],  
+        "alarge": [
+            [""],
+            # ["mvcc"]
+        ],
+        "buffer": [
+            sysname["Falcon"], sysname["Inp"],
+            sysname["Outp"],
+        ],
+        "thread_count": [[48]],
+        "ycsb_size": [[64], [128]],
+    }
+    test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_size")
+
+    props = {
+        "basic": [["basic_dram", "ycsb_size", "align"]],
+        "ycsb": [
+            ["ycsb_a"],
+        ],
+        "cc_cfg": [
+            ["local_cc_cfg_occ"],
+        ],  
+        "alarge": [
+            ["large"],
+            # ["mvcc"]
+        ],
+        "buffer": [
+            sysname["Falcon"], sysname["Inp"],
+            sysname["Outp"],
+        ],
+        "thread_count": [[48]],
+        "ycsb_size": [[256], [512], [1024], [2048], [4096], [8192], [16384], [32769], [65536], [131072], [262144], [524288], [1048576]],
+    }
+    test([], props, list(props.keys()), "ycsb_test_sync", "ycsb_size")
+
+
 def test_tpcc_scal():
     global k
     global index_type
@@ -424,11 +517,13 @@ def test_tpcc_scal():
 
 if __name__ == "__main__":
 
-    test_ycsb_nvm() # 10 test cases
-    test_ycsb_dram() # 6 test cases
+    # test_ycsb_nvm() # 10 test cases
+    # test_ycsb_dram() # 6 test cases
 
     # test_tpcc_nvm() # 60 test cases
     # test_tpcc_dram() # 36 test cases
 
     test_ycsb_scal() # 35 test cases
-    test_tpcc_scal() # 35 test cases
+    # test_tpcc_scal() # 35 test cases
+
+    # test_size()

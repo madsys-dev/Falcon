@@ -14,12 +14,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use super::transaction::Transaction;
 
 #[cfg(feature = "ilog")]
-const MANAGER_PAGE_SIZE: u64 = 2048 - 4 * U64_OFFSET;
+const MANAGER_PAGE_SIZE: u64 = crate::mvcc_config::YCSB_SIZE as u64 * 2 - 4 * U64_OFFSET;
 #[cfg(feature = "ilog")]
 const DRAM_PAGE_SIZE: u64 = PAGE_SIZE * 20 - 4 * U64_OFFSET;
 #[cfg(not(feature = "ilog"))]
 const MANAGER_PAGE_SIZE: u64 = PAGE_SIZE - 4 * U64_OFFSET;
-const DATA_SIZE: u64 = 1280;
+const DATA_SIZE: u64 = crate::mvcc_config::YCSB_SIZE as u64 + 256;
 const COMMITED_OFFSET: u64 = U64_OFFSET;
 const NEXT_OFFSET: u64 = COMMITED_OFFSET + U64_OFFSET;
 const STATE: u64 = NEXT_OFFSET + U64_OFFSET;

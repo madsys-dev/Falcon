@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 
+use crate::mvcc_config::YCSB_SIZE;
+
 pub fn append_u64(s: &mut String, u: u64) {
     if !s.is_empty() {
         s.push(',');
@@ -63,12 +65,13 @@ pub struct Properties {
     pub max_field_length: usize,
 }
 
+
 impl Properties {
     pub fn default() -> Self {
         let mut prop = Properties {
             init_parallelism: 1,
             #[cfg(feature = "nvm_server")]
-            table_size: crate::customer_config::YCSB_TOTAL,
+            table_size: std::cmp::min(crate::customer_config::YCSB_TOTAL, crate::customer_config::YCSB_TOTAL / (YCSB_SIZE as u64) * 1024),
             #[cfg(feature = "native")]
             table_size: 100000,
             zipf_theta: 0.6,
@@ -148,6 +151,8 @@ impl Properties {
             field_per_tuple: 2,
             #[cfg(not(feature = "align"))]
             field_per_tuple: 1,
+            #[cfg(all(feature = "align", feature = "ycsb_size"))]
+            field_per_tuple: 1,
             virtual_part_cnt: 1,
             first_part_local: true,
             max_key_length: 8,
@@ -164,6 +169,8 @@ impl Properties {
             max_field_length: 1000,
             #[cfg(feature = "native")]
             max_field_length: 10,
+            #[cfg(all(feature = "align", feature = "ycsb_size"))]
+            max_field_length: YCSB_SIZE,
         };
         prop
     }
